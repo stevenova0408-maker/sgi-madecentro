@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Iniciar Sesión - SGI Madecentro</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #ffffff, #fff4e6);
+            margin: 0;
+            padding: 0;
+            color: #111827;
+        }
+
+        header {
+            background: #ff7a00;
+            padding: 18px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
+        }
+
+        header img {
+            height: 55px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 22px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .container {
+            padding: 25px;
+            max-width: 900px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 14px;
+            margin-bottom: 18px;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.08);
+            border-left: 6px solid #ff7a00;
+        }
+
+        input, select {
+            padding: 12px;
+            width: 100%;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 2px solid #d1d5db;
+            outline: none;
+            margin-top: 8px;
+            box-sizing: border-box;
+        }
+
+        input:focus, select:focus {
+            border: 2px solid #ff7a00;
+        }
+
+        button {
+            padding: 12px 18px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #ff7a00;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            margin-top: 12px;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #e56d00;
+        }
+
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .btn-volver {
+            background: #111827;
+        }
+
+        .btn-volver:hover {
+            background: #000000;
+        }
+
+        #mensaje {
+            margin-top: 12px;
+            font-weight: bold;
+            min-height: 20px;
+        }
+
+        .mini {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <img src="/static/logo.png" alt="Madecentro">
+    <h1>SGI - Iniciar Sesión de Empaque</h1>
+</header>
+
+<div class="container">
+
+    <div class="card">
+        <h3>🧾 Pedido Seleccionado</h3>
+        <p><b>ID Pedido:</b> {{ pedido_id }}</p>
+        <p class="mini">Ingrese los datos del operario para iniciar sesión de pistoleo.</p>
+    </div>
+
+    <div class="card">
+        <h3>👷 Datos del Operario</h3>
+
+        <label><b>Cédula:</b></label>
+        <input type="text" id="cedula" placeholder="Ingrese cédula" autocomplete="off">
+
+        <label><b>Nombre:</b></label>
+        <input type="text" id="nombre" placeholder="Ingrese nombre" autocomplete="off">
+
+        <label><b>Zunchadora:</b></label>
+        <select id="zunchadora">
+            <option value="">Seleccione estación</option>
+            <option value="Zunchadora 1">Zunchadora 1</option>
+            <option value="Zunchadora 2">Zunchadora 2</option>
+            <option value="Zunchadora 3">Zunchadora 3</option>
+            <option value="Zunchadora 4">Zunchadora 4</option>
+            <option value="Zunchadora 5">Zunchadora 5</option>
+            <option value="Zunchadora 6">Zunchadora 6</option>
+            <option value="Zunchadora 7">Zunchadora 7</option>
+            <option value="Zunchadora 8">Zunchadora 8</option>
+        </select>
+
+        <button id="btn_iniciar" onclick="crearSesion()">🚀 Iniciar Pistoleo</button>
+
+        <button class="btn-volver" onclick="window.location.href='/pedidos'">
+            ⬅ Volver a Pedidos
+        </button>
+
+        <p id="mensaje"></p>
+    </div>
+
+</div>
+
+<script>
+const PEDIDO_ID = {{ pedido_id | tojson }};
+let creando = false;
+
+/* ========= FETCH SEGURO ========= */
+async function fetchSeguro(url, options={}){
+
+    try{
+        const res = await fetch(url, options);
+
+        if(res.status === 401){
+            alert("Sesión expirada");
+            window.location.href = "/login";
+            return null;
+        }
+
+        const data = await res.json().catch(()=>null);
+
+        if(!res.ok){
+            return { error: true, message: data?.detail || "Error del servidor" };
+        }
+
+        return data;
+
+    }catch(e){
+        return { error: true, message: "Error de conexión con el servidor" };
+    }
+}
+
+/* ========= CREAR SESIÓN ========= */
+async function crearSesion(){
+
+    if(creando) return;
+    creando = true;
+
+    let cedula = document.getElementById("cedula").value.trim();
+    let nombre = document.getElementById("nombre").value.trim();
+    let zunchadora = document.getElementById("zunchadora").value.trim();
+
+    let msg = document.getElementById("mensaje");
+    let btn = document.getElementById("btn_iniciar");
+
+    msg.innerText = "";
+    msg.style.color = "#dc2626";
+
+    // Normaliza cédula (solo números)
+    cedula = cedula.replace(/\D/g, "");
+
+    if(!cedula || !nombre || !zunchadora){
+        msg.innerText = "❌ Debe llenar todos los campos correctamente";
+        creando = false;
+        return;
+    }
+
+    btn.innerText = "⏳ Creando sesión...";
+    btn.disabled = true;
+
+    const data = await fetchSeguro(`/crear_sesion/${PEDIDO_ID}`,{
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            cedula,
+            nombre,
+            zunchadora
+        })
+    });
+
+    if(!data || data.error){
+        msg.innerText = "❌ " + (data?.message || "No se pudo crear sesión");
+        btn.innerText = "🚀 Iniciar Pistoleo";
+        btn.disabled = false;
+        creando = false;
+        return;
+    }
+
+    if(!data.sesion_id){
+        msg.innerText = "❌ Sesión no creada correctamente";
+        btn.innerText = "🚀 Iniciar Pistoleo";
+        btn.disabled = false;
+        creando = false;
+        return;
+    }
+
+    window.location.href = `/pistoleo/${PEDIDO_ID}/${data.sesion_id}`;
+}
+
+/* ========= ENTER RÁPIDO ========= */
+["cedula","nombre","zunchadora"].forEach(id=>{
+    document.getElementById(id).addEventListener("keyup", function(e){
+        if(e.key === "Enter"){
+            crearSesion();
+        }
+    });
+});
+</script>
+
+</body>
+</html>

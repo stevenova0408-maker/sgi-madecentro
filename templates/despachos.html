@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Despachos - SGI Madecentro</title>
+
+<style>
+
+body{
+    font-family:'Segoe UI',sans-serif;
+    margin:0;
+    background:#f5f6fa;
+    color:#1f2937;
+}
+
+header{
+    background:#ff7a00;
+    padding:18px 30px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    color:white;
+}
+
+header h2{margin:0;}
+
+button{
+    padding:8px 14px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.btn-primary{background:#ff7a00;color:white;}
+.btn-secondary{background:#111827;color:white;}
+.btn-green{background:#16a34a;color:white;}
+.btn-blue{background:#2563eb;color:white;}
+
+.container{
+    max-width:1200px;
+    margin:auto;
+    padding:25px;
+}
+
+.stats-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:15px;
+    margin-bottom:20px;
+}
+
+.stat-card{
+    background:white;
+    padding:18px;
+    border-radius:12px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.05);
+    text-align:center;
+}
+
+.alert-grid{
+    display:flex;
+    gap:15px;
+    margin-bottom:25px;
+}
+
+.alert-box{
+    flex:1;
+    padding:14px;
+    border-radius:10px;
+    color:white;
+    font-weight:bold;
+    text-align:center;
+}
+
+.verde{background:#16a34a;}
+.amarillo{background:#f59e0b;}
+.rojo{background:#dc2626;}
+
+.ov-card{
+    background:white;
+    padding:20px;
+    border-radius:14px;
+    margin-bottom:20px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.08);
+    border-left:6px solid #ff7a00;
+}
+
+.progress-bar{
+    width:100%;
+    height:14px;
+    background:#e5e7eb;
+    border-radius:8px;
+    overflow:hidden;
+    margin-top:8px;
+}
+
+.progress-fill{
+    height:100%;
+    background:#ff7a00;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:11px;
+    color:white;
+}
+
+.op-list{
+    margin-top:12px;
+    background:#f9fafb;
+    padding:10px;
+    border-radius:10px;
+    display:none;
+}
+
+.op-item{
+    padding:4px 0;
+    font-size:13px;
+}
+
+.op-entregada{color:#16a34a;font-weight:bold;}
+.op-pendiente{color:#dc2626;font-weight:bold;}
+
+</style>
+</head>
+
+<body>
+
+<header>
+    <h2>🚚 SGI - Panel de Despachos</h2>
+    <div>
+        <button class="btn-blue" onclick="window.location.href='/'">
+            ⬅ Volver al Panel
+        </button>
+
+        <button class="btn-primary" onclick="document.getElementById('fileInput').click()">
+            📥 Cargar Base
+        </button>
+
+        <button class="btn-secondary" onclick="cargarPanel()">
+            🔄 Actualizar
+        </button>
+    </div>
+</header>
+
+<input type="file" id="fileInput" accept=".xlsx" style="display:none">
+
+<div class="container">
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3 id="total_ovs">0</h3>
+        <span>Total OVs</span>
+    </div>
+    <div class="stat-card">
+        <h3 id="ovs_listas">0</h3>
+        <span>OVs Listas</span>
+    </div>
+    <div class="stat-card">
+        <h3 id="total_ops">0</h3>
+        <span>Total OPS</span>
+    </div>
+    <div class="stat-card">
+        <h3 id="ops_entregadas">0</h3>
+        <span>OPS Entregadas</span>
+    </div>
+</div>
+
+<div class="alert-grid">
+    <div class="alert-box verde" id="alert_verde">1–2 días: 0</div>
+    <div class="alert-box amarillo" id="alert_amarillo">3–4 días: 0</div>
+    <div class="alert-box rojo" id="alert_rojo">5+ días: 0</div>
+</div>
+
+<div id="lista_ovs"></div>
+
+</div>
+
+<script>
+
+async function cargarPanel(){
+
+    const res = await fetch("/api/despachos_resumen");
+    const data = await res.json();
+
+    document.getElementById("total_ovs").innerText = data.resumen_general.total_ovs;
+    document.getElementById("total_ops").innerText = data.resumen_general.total_ops;
+    document.getElementById("ovs_listas").innerText = data.resumen_general.ovs_listas;
+    document.getElementById("ops_entregadas").innerText = data.resumen_general.ops_entregadas;
+
+    document.getElementById("alert_verde").innerText = "1–2 días: " + data.alertas["2_dias"];
+    document.getElementById("alert_amarillo").innerText = "3–4 días: " + data.alertas["4_dias"];
+    document.getElementById("alert_rojo").innerText = "5+ días: " + data.alertas["6_mas"];
+
+    let html = "";
+
+    data.detalle.forEach((ov,index) => {
+
+        let boton = "";
+
+        if(ov.estado === "LISTA_PARA_DESPACHO"){
+            boton += `
+                <button class="btn-green" onclick="despacharOV(${ov.id})">
+                    🚛 Despachar
+                </button>
+            `;
+        }
+
+        if(ov.estado !== "DESPACHADA"){
+            boton += `
+                <button class="btn-secondary" onclick="anularOV(${ov.id})">
+                    ❌ Anular
+                </button>
+            `;
+        }
+
+        html += `
+        <div class="ov-card">
+
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <b>OV:</b> ${ov.ov}<br>
+                    <b>Estado:</b> ${ov.estado}<br>
+                    <b>Días en CEDI:</b> ${ov.dias}
+                </div>
+
+                <div>
+                    <button onclick="toggleOps(${index})">Ver OP</button>
+                    ${boton}
+                </div>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:${ov.porcentaje}%">
+                    ${ov.porcentaje}%
+                </div>
+            </div>
+
+            <small>${ov.entregadas}/${ov.total_ops} OPS entregadas</small>
+
+            <div class="op-list" id="ops-${index}">
+                ${ov.ops.map(op => `
+                    <div class="op-item">
+                        ${op.numero} —
+                        <span class="${op.estado === 'ENTREGADA' ? 'op-entregada':'op-pendiente'}">
+                            ${op.estado}
+                        </span>
+                        ${op.fecha ? " | "+op.fecha : ""}
+                    </div>
+                `).join("")}
+            </div>
+
+        </div>
+        `;
+    });
+
+    document.getElementById("lista_ovs").innerHTML = html;
+}
+
+function toggleOps(index){
+    const el = document.getElementById("ops-"+index);
+    el.style.display = el.style.display === "block" ? "none":"block";
+}
+
+async function despacharOV(id){
+
+    if(!confirm("¿Confirmar despacho de esta OV?")) return;
+
+    const res = await fetch(`/api/despachos/despachar/${id}`, {
+        method:"POST"
+    });
+
+    if(res.ok){
+        alert("OV despachada correctamente");
+        cargarPanel();
+    }else{
+        alert("Error al despachar");
+    }
+}
+
+// 🔐 NUEVA FUNCIÓN CON PIN
+async function anularOV(id){
+
+    let pin = prompt("Ingrese PIN Supervisor:");
+    if(!pin) return;
+
+    let observacion = prompt("Ingrese observación obligatoria:");
+    if(!observacion){
+        alert("Debe ingresar observación");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("pin", pin);
+    formData.append("observacion", observacion);
+
+    const res = await fetch(`/api/despachos/anular/${id}`, {
+        method:"POST",
+        body: formData
+    });
+
+    const data = await res.json();
+
+    if(res.ok){
+        alert(data.mensaje);
+        cargarPanel();
+    }else{
+        alert("Error: " + (data.detail || "No se pudo anular"));
+    }
+}
+
+document.getElementById("fileInput").addEventListener("change", async function(){
+
+    const file = this.files[0];
+    if(!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch("/api/despachos/subir_base", {
+        method:"POST",
+        body:formData
+    });
+
+    const data = await res.json();
+
+    if(res.ok){
+        alert(data.mensaje);
+        cargarPanel();
+    }else{
+        alert("Error: " + data.detail);
+    }
+
+    this.value = "";
+});
+
+cargarPanel();
+
+</script>
+
+</body>
+</html>

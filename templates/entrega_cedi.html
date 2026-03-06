@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Entrega al CEDI - SGI Madecentro</title>
+
+<style>
+/* === ESTILOS IGUALES A LOS TUYOS (SIN CAMBIOS VISUALES) === */
+body{
+    font-family: Arial, sans-serif;
+    margin:0;
+    background: linear-gradient(135deg,#ffffff,#fff4e6);
+    color:#111827;
+}
+
+header{
+    background:#ff7a00;
+    padding:18px 30px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    color:white;
+}
+
+header img{height:50px;}
+
+header .left{
+    display:flex;
+    align-items:center;
+    gap:20px;
+}
+
+.container{
+    max-width:1200px;
+    margin:auto;
+    padding:25px;
+}
+
+.card{
+    background:white;
+    padding:20px;
+    border-radius:14px;
+    margin-bottom:20px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.08);
+    border-left:6px solid #ff7a00;
+}
+
+h3{margin-top:0;}
+
+.progress-bar{
+    width:100%;
+    height:20px;
+    background:#f3f4f6;
+    border-radius:10px;
+    overflow:hidden;
+    margin-top:8px;
+}
+
+.progress-fill{
+    height:100%;
+    background:#ff7a00;
+    width:0%;
+    color:white;
+    font-size:12px;
+    font-weight:bold;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:width .4s ease;
+}
+
+.progress-fill.ok{background:#16a34a;}
+
+input{
+    padding:10px;
+    border-radius:8px;
+    border:2px solid #e5e7eb;
+    width:100%;
+    max-width:400px;
+    margin-top:6px;
+}
+
+button{
+    padding:10px 16px;
+    border:none;
+    border-radius:8px;
+    background:#ff7a00;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+    margin-top:10px;
+}
+
+button.secondary{background:#111827;}
+button.green{background:#16a34a;}
+button.blue{background:#2563eb;}
+button.red{background:#dc2626;}
+
+button:disabled{
+    background:#9ca3af;
+    cursor:not-allowed;
+}
+
+.cronometro{
+    font-size:42px;
+    font-weight:bold;
+    text-align:center;
+    padding:15px;
+    border-radius:12px;
+    margin-top:10px;
+}
+
+.cronometro.ok{background:#f0fdf4;color:#16a34a;}
+.cronometro.warn{background:#fff7ed;color:#f59e0b;}
+.cronometro.danger{background:#fee2e2;color:#dc2626;}
+
+.estado-badge{
+    padding:6px 12px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.badge-pendiente{background:#f3f4f6;color:#111827;}
+.badge-curso{background:#fff7ed;color:#ff7a00;}
+.badge-completo{background:#f0fdf4;color:#16a34a;}
+
+.preview-img{
+    max-width:300px;
+    margin-top:10px;
+    border-radius:10px;
+    border:2px solid #e5e7eb;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="left">
+        <img src="/static/logo.png">
+        <h2 style="margin:0;">SGI - Entrega Oficial al CEDI</h2>
+    </div>
+
+    <button class="secondary" onclick="window.location.href='/pedidos'">
+        ⬅ Volver a Pedidos
+    </button>
+</header>
+
+<div class="container">
+
+<div class="card">
+<h3>📦 Información del Pedido</h3>
+
+<p><b>Pedido:</b> <span id="pedido">-</span></p>
+<p><b>Cliente:</b> <span id="cliente">-</span></p>
+<p><b>Estado:</b> <span id="estado_badge" class="estado-badge badge-pendiente">PENDIENTE</span></p>
+
+<h4>Avance Pistoleo</h4>
+<div class="progress-bar">
+<div id="barra_pistoleo" class="progress-fill">0%</div>
+</div>
+
+<p><b>Total Paquetes:</b> <span id="total_paquetes">0</span></p>
+<p><b>Confirmados:</b> <span id="confirmados">0</span></p>
+<p><b>Pendientes:</b> <span id="pendientes">0</span></p>
+
+<h4>Avance Entrega</h4>
+<div class="progress-bar">
+<div id="barra_entrega" class="progress-fill">0%</div>
+</div>
+</div>
+
+<div class="card">
+<h3>👤 Registro Responsable</h3>
+<input type="text" id="nombre" placeholder="Nombre Responsable">
+<br>
+<input type="text" id="cedula" placeholder="Cédula Responsable">
+<br>
+<button id="btn_iniciar" onclick="iniciarEntrega()">INICIAR ENTREGA</button>
+</div>
+
+<div class="card">
+<h3>⏱ Tiempo de Proceso (Máx 2 Horas)</h3>
+<div id="cronometro" class="cronometro ok">00:00:00</div>
+</div>
+
+<div class="card">
+<h3>📊 Confirmar Paquetes</h3>
+<input type="number" id="paquetes_input" placeholder="Cantidad confirmada">
+<br>
+<button id="btn_confirmar" class="green" onclick="finalizarConteo()">Confirmar Conteo</button>
+
+<hr style="margin:20px 0;">
+
+<h4 style="color:#dc2626;">🔐 Reinicio Supervisor</h4>
+<input type="password" id="pin_reinicio" placeholder="PIN Supervisor">
+<br>
+<input type="text" id="obs_reinicio" placeholder="Observación obligatoria">
+<br>
+<button class="red" onclick="reiniciarEntrega()">Reiniciar Conteo</button>
+</div>
+
+<div class="card">
+<h3>📷 Subir Remisión</h3>
+<input type="file" id="remision_file" accept="image/*">
+<br>
+<button class="blue" onclick="subirRemision()">Subir Remisión</button>
+<div id="preview"></div>
+</div>
+
+<div class="card">
+<h3>📄 Reporte y Envío</h3>
+<button class="secondary" onclick="generarPDF()">Generar Reporte PDF</button>
+<br><br>
+<input type="email" id="correo_manual" placeholder="Correo destino adicional">
+<br>
+<button id="btn_enviar" class="green" onclick="enviarCorreo()">Enviar Correo y Finalizar</button>
+<p id="mensaje"></p>
+</div>
+
+</div>
+
+<script>
+const PEDIDO_ID = {{ pedido_id }};
+let fechaInicio = null;
+let estadoActual = "PENDIENTE";
+let totalPaquetes = 0;
+
+/* ================= CARGAR DATOS ================= */
+async function cargarDatos(){
+
+    let res = await fetch(`/api/entrega_cedi/${PEDIDO_ID}`);
+    let data = await res.json();
+
+    estadoActual = data.estado;
+
+    // CRONÓMETRO CONTROL
+    if(data.estado === "EN_CURSO" && data.fecha_inicio && !data.fecha_fin){
+        fechaInicio = new Date(data.fecha_inicio + "Z");
+    } else {
+        fechaInicio = null;
+    }
+
+    document.getElementById("confirmados").innerText = data.paquetes_confirmados || 0;
+
+    actualizarEstadoVisual();
+    await cargarPistoleo();
+    actualizarEntrega();
+}
+
+/* ================= PISTOLEO ================= */
+async function cargarPistoleo(){
+
+    let pist = await fetch(`/estado/${PEDIDO_ID}`);
+    let p = await pist.json();
+
+    document.getElementById("pedido").innerText = p.pedido;
+    document.getElementById("cliente").innerText = p.cliente;
+
+    let barra = document.getElementById("barra_pistoleo");
+    barra.className = "progress-fill";
+    barra.style.width = p.porcentaje + "%";
+    barra.innerText = p.porcentaje + "%";
+    if(p.porcentaje == 100) barra.classList.add("ok");
+
+    let paq = await fetch(`/api/pedido_paquetes/${PEDIDO_ID}`);
+    let paqData = await paq.json();
+
+    totalPaquetes = paqData.total_paquetes;
+    document.getElementById("total_paquetes").innerText = totalPaquetes;
+}
+
+/* ================= ESTADO VISUAL ================= */
+function actualizarEstadoVisual(){
+
+    let badge = document.getElementById("estado_badge");
+    badge.className = "estado-badge";
+
+    document.getElementById("btn_confirmar").disabled = false;
+    document.getElementById("btn_enviar").disabled = false;
+
+    if(estadoActual == "PENDIENTE"){
+        badge.classList.add("badge-pendiente");
+        badge.innerText = "PENDIENTE";
+    }
+
+    if(estadoActual == "EN_CURSO"){
+        badge.classList.add("badge-curso");
+        badge.innerText = "EN CURSO";
+    }
+
+    if(estadoActual == "COMPLETADO"){
+        badge.classList.add("badge-completo");
+        badge.innerText = "COMPLETADO";
+
+        document.getElementById("btn_confirmar").disabled = true;
+        document.getElementById("btn_enviar").disabled = true;
+    }
+}
+
+/* ================= BARRA ENTREGA ================= */
+function actualizarEntrega(){
+
+    let confirmados = parseInt(document.getElementById("confirmados").innerText) || 0;
+    let pendientes = totalPaquetes - confirmados;
+    if(pendientes < 0) pendientes = 0;
+
+    document.getElementById("pendientes").innerText = pendientes;
+
+    let porcentaje = totalPaquetes > 0 ?
+        Math.round((confirmados / totalPaquetes) * 100) : 0;
+
+    let barra = document.getElementById("barra_entrega");
+    barra.className = "progress-fill";
+    barra.style.width = porcentaje + "%";
+    barra.innerText = porcentaje + "%";
+    if(porcentaje == 100) barra.classList.add("ok");
+}
+
+/* ================= ACCIONES ================= */
+
+async function iniciarEntrega(){
+    let nombre = document.getElementById("nombre").value.trim();
+    let cedula = document.getElementById("cedula").value.trim();
+
+    let form = new FormData();
+    form.append("nombre", nombre);
+    form.append("cedula", cedula);
+
+    let res = await fetch(`/api/entrega_cedi/iniciar/${PEDIDO_ID}`,{
+        method:"POST",
+        body:form
+    });
+
+    let data = await res.json();
+    document.getElementById("mensaje").innerText = data.mensaje || data.detail;
+
+    await cargarDatos();
+}
+
+async function finalizarConteo(){
+    let cant = document.getElementById("paquetes_input").value;
+
+    let form = new FormData();
+    form.append("paquetes_confirmados", cant);
+
+    let res = await fetch(`/api/entrega_cedi/finalizar/${PEDIDO_ID}`,{
+        method:"POST",
+        body:form
+    });
+
+    let data = await res.json();
+    document.getElementById("mensaje").innerText = data.mensaje || data.detail;
+
+    await cargarDatos();
+}
+
+async function reiniciarEntrega(){
+
+    let pin = document.getElementById("pin_reinicio").value;
+    let obs = document.getElementById("obs_reinicio").value;
+
+    let form = new FormData();
+    form.append("pin", pin);
+    form.append("observacion", obs);
+
+    let res = await fetch(`/api/entrega_cedi/reiniciar/${PEDIDO_ID}`,{
+        method:"POST",
+        body:form
+    });
+
+    let data = await res.json();
+    document.getElementById("mensaje").innerText = data.mensaje || data.detail;
+
+    await cargarDatos();
+}
+
+async function subirRemision(){
+
+    let file = document.getElementById("remision_file").files[0];
+    let form = new FormData();
+    form.append("archivo", file);
+
+    let res = await fetch(`/api/entrega_cedi/subir_remision/${PEDIDO_ID}`,{
+        method:"POST",
+        body:form
+    });
+
+    let data = await res.json();
+    document.getElementById("mensaje").innerText = data.mensaje || data.detail;
+
+    await cargarDatos();
+}
+
+async function enviarCorreo(){
+
+    let correo = document.getElementById("correo_manual").value;
+
+    let form = new FormData();
+    form.append("correo_destino", correo);
+
+    let res = await fetch(`/api/entrega_cedi/enviar_correo/${PEDIDO_ID}`,{
+        method:"POST",
+        body:form
+    });
+
+    let data = await res.json();
+    document.getElementById("mensaje").innerText = data.mensaje || data.detail;
+
+    if(res.ok){
+        // ⬇⬇⬇ AQUI ESTA LA CLAVE ⬇⬇⬇
+        window.location.href = "/pedidos";
+    }
+}
+
+function generarPDF(){
+    window.open(`/reporte_pdf/${PEDIDO_ID}?t=${new Date().getTime()}`, "_blank");
+}
+
+/* ================= CRONÓMETRO ================= */
+function actualizarCronometro(){
+
+    if(!fechaInicio) return;
+
+    let ahora = new Date();
+    let diff = Math.floor((ahora - fechaInicio) / 1000);
+
+    let horas = Math.floor(diff / 3600);
+    let minutos = Math.floor((diff % 3600) / 60);
+    let segundos = diff % 60;
+
+    let txt =
+        String(horas).padStart(2,'0') + ":" +
+        String(minutos).padStart(2,'0') + ":" +
+        String(segundos).padStart(2,'0');
+
+    let cron = document.getElementById("cronometro");
+    cron.innerText = txt;
+
+    if(diff < 5400) cron.className = "cronometro ok";
+    else if(diff < 7200) cron.className = "cronometro warn";
+    else cron.className = "cronometro danger";
+}
+
+setInterval(actualizarCronometro, 1000);
+cargarDatos();
+</script>
+
+</body>
+</html>

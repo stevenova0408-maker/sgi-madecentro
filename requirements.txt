@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+jinja2
+sqlalchemy
+psycopg2-binary
+pandas
+python-multipart
+reportlab
+openpyxl
+starlette

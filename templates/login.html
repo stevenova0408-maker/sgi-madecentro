@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ingreso Planta - SGI Madecentro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            background: linear-gradient(135deg, #ffffff, #fff4e6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #1f2937;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 380px;
+            background: white;
+            padding: 40px;
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            text-align: center;
+            border-top: 6px solid #ff7a00;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo {
+            height: 65px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            margin-bottom: 10px;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .subtext {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 25px;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 10px;
+            border: 2px solid #e5e7eb;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        select:focus {
+            border: 2px solid #ff7a00;
+        }
+
+        button {
+            margin-top: 22px;
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            background: #ff7a00;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background: #e56d00;
+            transform: translateY(-1px);
+        }
+
+        .footer {
+            margin-top: 25px;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                margin: 20px;
+                padding: 30px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-container">
+
+        <!-- LOGO -->
+        <img src="/static/logo.png" alt="Madecentro" class="logo">
+
+        <h2>SGI - Sistema de Gestión Interna</h2>
+        <div class="subtext">
+            Seleccione la planta para iniciar sesión
+        </div>
+
+        <form method="POST" action="/login">
+
+            <select name="planta" required>
+                <option value="" disabled selected>Seleccione planta</option>
+                <option value="050">Planta 050</option>
+                <option value="051">Planta 051</option>
+                <option value="052">Planta 052</option>
+                <option value="053">Planta 053</option>
+                <option value="064">Planta 064</option>
+                <option value="065">Planta 065</option>
+            </select>
+
+            <button type="submit">
+                🚀 Ingresar al Sistema
+            </button>
+
+        </form>
+
+        <div class="footer">
+            Madecentro | SGI Corporativo © 2026
+        </div>
+
+    </div>
+
+</body>
+</html>

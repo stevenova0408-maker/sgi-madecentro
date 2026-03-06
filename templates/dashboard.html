@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>SGI - Centro de Control Gerencial</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{
+    margin:0;
+    font-family:'Segoe UI', sans-serif;
+    background:#f4f6f9;
+    color:#1f2937;
+    position:relative;
+}
+body::after{
+    content:"MADECENTRO";
+    position:fixed;
+    bottom:30px;
+    right:40px;
+    font-size:90px;
+    font-weight:900;
+    color:rgba(255,122,0,0.05);
+    pointer-events:none;
+    z-index:0;
+}
+header{
+    background:linear-gradient(90deg,#ff7a00,#1f2937);
+    color:white;
+    padding:20px 35px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    box-shadow:0 3px 10px rgba(0,0,0,0.15);
+}
+.container{
+    max-width:1650px;
+    margin:auto;
+    padding:30px;
+    position:relative;
+    z-index:1;
+}
+.card{
+    background:white;
+    border-radius:16px;
+    padding:25px;
+    margin-bottom:25px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.07);
+}
+.big-index{
+    text-align:center;
+    font-size:48px;
+    font-weight:800;
+    margin-top:10px;
+    color:#ff7a00;
+}
+.tabs{
+    display:flex;
+    gap:12px;
+    margin-bottom:25px;
+}
+.tab-btn{
+    padding:10px 18px;
+    border:none;
+    border-radius:8px;
+    background:#e5e7eb;
+    cursor:pointer;
+    font-weight:600;
+}
+.tab-btn.active{
+    background:#ff7a00;
+    color:white;
+}
+.tab-content{ display:none; }
+.tab-content.active{ display:block; }
+.kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:20px;
+}
+.kpi{
+    background:white;
+    border-left:6px solid #ff7a00;
+    padding:20px;
+    border-radius:14px;
+    text-align:center;
+    box-shadow:0 4px 10px rgba(0,0,0,0.08);
+}
+.kpi span{
+    display:block;
+    font-size:24px;
+    font-weight:800;
+    margin-top:6px;
+}
+canvas{ margin-top:25px; }
+input[type="date"]{
+    padding:6px;
+    border-radius:6px;
+    border:1px solid #ccc;
+}
+.export-btn{
+    background:#1f2937;
+    color:white;
+    border:none;
+    padding:6px 14px;
+    border-radius:6px;
+    cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<header>
+    <h2>🏛 SGI – Centro de Control Gerencial</h2>
+    <button onclick="window.location.href='/pedidos'"
+        style="padding:8px 14px;border:none;border-radius:6px;background:white;color:#ff7a00;font-weight:600;">
+        ⬅ Volver
+    </button>
+</header>
+
+<div class="container">
+
+<div class="card">
+    <h3>Índice General SGI</h3>
+    <div id="indice" class="big-index">0%</div>
+
+    <div style="margin-top:15px;display:flex;gap:10px;justify-content:center;">
+        <input type="date" id="desde">
+        <input type="date" id="hasta">
+        <button onclick="filtrarFechas()"
+            style="padding:8px 14px;border:none;border-radius:6px;background:#ff7a00;color:white;font-weight:600;">
+            Aplicar
+        </button>
+    </div>
+</div>
+
+<div class="tabs">
+    <button class="tab-btn active" onclick="cambiarTab('prod',this)">Producción</button>
+    <button class="tab-btn" onclick="cambiarTab('ent',this)">Entrega CEDI</button>
+    <button class="tab-btn" onclick="cambiarTab('des',this)">Despachos</button>
+    <button class="tab-btn" onclick="cambiarTab('cons',this)">Consolidado</button>
+</div>
+
+<!-- PRODUCCIÓN -->
+<div id="prod" class="tab-content active">
+    <div class="card">
+        <div class="kpi-grid">
+            <div class="kpi">Pendientes<span id="p_pend">0</span></div>
+            <div class="kpi">En Proceso<span id="p_proc">0</span></div>
+            <div class="kpi">Completadas<span id="p_comp">0</span></div>
+            <div class="kpi">% Cumplimiento<span id="p_cump">0%</span></div>
+        </div>
+        <canvas id="grafProd"></canvas>
+    </div>
+</div>
+
+<!-- ENTREGA -->
+<div id="ent" class="tab-content">
+    <div class="card">
+        <div class="kpi-grid">
+            <div class="kpi">Pendientes<span id="e_pend">0</span></div>
+            <div class="kpi">En Curso<span id="e_curso">0</span></div>
+            <div class="kpi">Completadas<span id="e_comp">0</span></div>
+            <div class="kpi">Promedio (min)<span id="e_prom">0</span></div>
+        </div>
+        <canvas id="grafEnt"></canvas>
+    </div>
+</div>
+
+<!-- DESPACHOS -->
+<div id="des" class="tab-content">
+    <div class="card">
+        <div class="kpi-grid">
+            <div class="kpi">En Proceso<span id="d_proc">0</span></div>
+            <div class="kpi">Listas<span id="d_list">0</span></div>
+            <div class="kpi">Despachadas<span id="d_desp">0</span></div>
+            <div class="kpi">Promedio Días<span id="d_prom">0</span></div>
+        </div>
+        <canvas id="grafDes"></canvas>
+    </div>
+</div>
+
+<!-- CONSOLIDADO -->
+<div id="cons" class="tab-content">
+    <div class="card">
+
+        <!-- BOTÓN EXPORTAR -->
+        <div style="display:flex;justify-content:flex-end;margin-bottom:15px;">
+            <button class="export-btn" onclick="exportarConsolidadoExcel()">
+                ⬇ Exportar Excel
+            </button>
+        </div>
+
+        <h3>📊 Consolidado Estratégico SGI</h3>
+        <canvas id="grafCons"></canvas>
+
+        <hr style="margin:30px 0;">
+
+        <h3 style="color:#ff7a00;">🔐 Generar Reporte Gerencial Oficial</h3>
+
+        <div style="display:flex;justify-content:center;gap:12px;margin-top:10px;">
+            <input type="password" id="pinGerencial"
+                   placeholder="Ingrese PIN Gerencial"
+                   style="padding:10px;border-radius:8px;border:1px solid #ccc;width:220px;">
+            <button onclick="generarPDFGerencial()"
+                style="padding:10px 18px;border:none;border-radius:8px;background:#ff7a00;color:white;font-weight:600;">
+                📄 Generar Reporte PDF
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+let dataGlobal;
+let charts = {};
+
+async function cargarDashboard(){
+    const res = await fetch("/api/dashboard_direccion");
+    dataGlobal = await res.json();
+    actualizarVista();
+}
+
+async function filtrarFechas(){
+    const desde = document.getElementById("desde").value;
+    const hasta = document.getElementById("hasta").value;
+
+    if(!desde || !hasta){
+        alert("Seleccione ambas fechas");
+        return;
+    }
+
+    const res = await fetch(`/api/dashboard_direccion?desde=${desde}&hasta=${hasta}`);
+    dataGlobal = await res.json();
+    actualizarVista();
+}
+
+function exportarConsolidadoExcel(){
+    const desde = document.getElementById("desde").value;
+    const hasta = document.getElementById("hasta").value;
+
+    let url = "/dashboard/export/consolidado";
+
+    if(desde && hasta){
+        url += `?desde=${desde}&hasta=${hasta}`;
+    }
+
+    window.open(url, "_blank");
+}
+
+function generarPDFGerencial(){
+    const pin = document.getElementById("pinGerencial").value;
+    const desde = document.getElementById("desde").value;
+    const hasta = document.getElementById("hasta").value;
+
+    if(!pin){
+        alert("Ingrese el PIN Gerencial");
+        return;
+    }
+
+    let url = `/dashboard/pdf-completo?pin=${pin}`;
+    if(desde && hasta){
+        url += `&desde=${desde}&hasta=${hasta}`;
+    }
+    window.open(url, "_blank");
+}
+
+function actualizarVista(){
+    document.getElementById("indice").innerText = dataGlobal.indice_sgi + "%";
+    document.getElementById("p_pend").innerText = dataGlobal.produccion.pendientes;
+    document.getElementById("p_proc").innerText = dataGlobal.produccion.en_proceso;
+    document.getElementById("p_comp").innerText = dataGlobal.produccion.completadas;
+    document.getElementById("p_cump").innerText = dataGlobal.produccion.cumplimiento + "%";
+
+    document.getElementById("e_pend").innerText = dataGlobal.entrega.pendientes;
+    document.getElementById("e_curso").innerText = dataGlobal.entrega.en_curso;
+    document.getElementById("e_comp").innerText = dataGlobal.entrega.completadas;
+    document.getElementById("e_prom").innerText = dataGlobal.entrega.promedio_minutos;
+
+    document.getElementById("d_proc").innerText = dataGlobal.despachos.en_proceso;
+    document.getElementById("d_list").innerText = dataGlobal.despachos.listas;
+    document.getElementById("d_desp").innerText = dataGlobal.despachos.despachadas;
+    document.getElementById("d_prom").innerText = dataGlobal.despachos.promedio_dias;
+
+    generarGrafico("grafProd", dataGlobal.produccion.tendencia, "#ff7a00");
+    generarGrafico("grafEnt", dataGlobal.entrega.tendencia, "#1f2937");
+    generarGrafico("grafDes", dataGlobal.despachos.tendencia, "#fbbf24");
+    generarGraficoConsolidado(dataGlobal.consolidado_diario);
+}
+
+function generarGrafico(canvasId, dataObj, color){
+    const labels = Object.keys(dataObj || {});
+    const values = Object.values(dataObj || {});
+
+    if(charts[canvasId]) charts[canvasId].destroy();
+
+    charts[canvasId] = new Chart(document.getElementById(canvasId), {
+        type:'line',
+        data:{
+            labels: labels.length ? labels : ["Sin datos"],
+            datasets:[{
+                label:"Registros",
+                data: values.length ? values : [0],
+                borderColor:color,
+                backgroundColor:color,
+                tension:0.4,
+                pointRadius:5
+            }]
+        },
+        options:{ scales:{ y:{ beginAtZero:true }}}
+    });
+}
+
+function generarGraficoConsolidado(data){
+    const fechas = Object.keys(data || {});
+    const prod = fechas.map(f => data[f]?.produccion || 0);
+    const ent = fechas.map(f => data[f]?.entregas || 0);
+    const des = fechas.map(f => data[f]?.despachos || 0);
+
+    if(charts["grafCons"]) charts["grafCons"].destroy();
+
+    charts["grafCons"] = new Chart(document.getElementById("grafCons"), {
+        type:'bar',
+        data:{
+            labels: fechas.length ? fechas : ["Sin datos"],
+            datasets:[
+                {label:"Producción", data:prod.length?prod:[0], backgroundColor:"#ff7a00"},
+                {label:"Entregas", data:ent.length?ent:[0], backgroundColor:"#1f2937"},
+                {label:"Despachos", data:des.length?des:[0], backgroundColor:"#fbbf24"}
+            ]
+        },
+        options:{ scales:{ y:{ beginAtZero:true }}}
+    });
+}
+
+function cambiarTab(tab,btn){
+    document.querySelectorAll(".tab-content").forEach(t=>t.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    document.getElementById(tab).classList.add("active");
+    btn.classList.add("active");
+}
+
+cargarDashboard();
+</script>
+
+</body>
+</html>

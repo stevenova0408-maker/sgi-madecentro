@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>SGI Control de Pistoleo - Madecentro</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #ffffff, #fff4e6);
+            margin: 0;
+            padding: 0;
+            color: #111827;
+        }
+
+        header {
+            background: #ff7a00;
+            padding: 18px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
+        }
+
+        header img {
+            height: 55px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 22px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .container {
+            padding: 25px;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 18px;
+            border-radius: 14px;
+            margin-bottom: 18px;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.08);
+            border-left: 6px solid #ff7a00;
+        }
+
+        .progress-bar {
+            width: 100%;
+            background: #f3f4f6;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 18px;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #ff7a00;
+            width: 0%;
+            text-align: center;
+            color: white;
+            font-size: 12px;
+            line-height: 18px;
+            font-weight: bold;
+            transition: width 0.4s ease;
+        }
+
+        .progress-fill.ok {
+            background: #16a34a;
+        }
+
+        input {
+            padding: 12px;
+            width: 100%;
+            max-width: 350px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 2px solid #d1d5db;
+            outline: none;
+            box-sizing: border-box;
+            margin-top: 6px;
+        }
+
+        input:focus {
+            border: 2px solid #ff7a00;
+        }
+
+        button {
+            padding: 12px 18px;
+            font-size: 15px;
+            cursor: pointer;
+            background: #ff7a00;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            margin-top: 8px;
+            margin-right: 6px;
+        }
+
+        button:hover {
+            background: #e56d00;
+        }
+
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #111827;
+        }
+
+        .btn-secondary:hover {
+            background: #000000;
+        }
+
+        .btn-green {
+            background: #16a34a;
+        }
+
+        .btn-green:hover {
+            background: #15803d;
+        }
+
+        .btn-blue {
+            background: #2563eb;
+        }
+
+        .btn-blue:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-mini {
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+            margin-top: 0px;
+            margin-right: 0px;
+        }
+
+        #mensaje {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .paquetes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 15px;
+        }
+
+        .paquete {
+            border-radius: 14px;
+            background: white;
+            padding: 15px;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.08);
+            border: 2px solid #f3f4f6;
+            position: relative;
+        }
+
+        .paquete h4 {
+            margin: 0;
+            font-size: 16px;
+            color: #111827;
+        }
+
+        .paquete-completo {
+            border: 2px solid #16a34a;
+            background: #f0fdf4;
+        }
+
+        .tag-completo {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #16a34a;
+            color: white;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .pieza {
+            padding: 7px;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pieza:last-child {
+            border-bottom: none;
+        }
+
+        .ok {
+            color: #16a34a;
+            font-weight: bold;
+        }
+
+        .pendiente {
+            color: #dc2626;
+            font-weight: bold;
+        }
+
+        .pieza-info {
+            flex: 1;
+        }
+
+        footer {
+            text-align: center;
+            padding: 15px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .row-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .msg-print {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .mini {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .divider {
+            height: 1px;
+            background: #eee;
+            margin: 15px 0;
+        }
+
+        .paquete-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <img src="/static/logo.png" alt="Madecentro">
+    <h1>SGI - Control de Pistoleo de Empaque</h1>
+</header>
+
+<div class="container">
+
+    <!-- DATOS PEDIDO -->
+    <div class="card">
+        <h3>📌 Datos del Pedido</h3>
+
+        <p><b>Pedido:</b> <span id="pedido">-</span></p>
+        <p><b>Cliente:</b> <span id="cliente">-</span></p>
+
+        <p><b>Avance General:</b> <span id="avance_general">0%</span></p>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="barra_general">0%</div>
+        </div>
+
+        <p>
+            <b>Total Piezas:</b> <span id="total">0</span> |
+            <b>Escaneadas:</b> <span id="escaneadas">0</span> |
+            <b>Pendientes:</b> <span id="pendientes">0</span>
+        </p>
+
+        <div class="row-actions">
+            <button class="btn-secondary" onclick="window.location.href='/pedidos'">⬅ Volver a Pedidos</button>
+
+            <button class="btn-blue" onclick="imprimirEtiquetasPedido()">
+                🏷️ Etiquetas Pedido Completo (PDF)
+            </button>
+        </div>
+
+        <div class="divider"></div>
+
+        <h4>🏷️ Imprimir Etiquetas por Paquete</h4>
+        <p class="mini">Ejemplo: <b>1</b> o <b>7|8</b> o <b>7 L 8</b></p>
+
+        <input type="text" id="paq_print" placeholder="Paquete a imprimir...">
+
+        <div class="row-actions">
+            <button class="btn-green" onclick="imprimirEtiquetasPaqueteManual()">
+                🏷️ Etiquetas del Paquete (PDF)
+            </button>
+        </div>
+
+        <p id="msg_print" class="msg-print"></p>
+    </div>
+
+    <!-- ESCANEO -->
+    <div class="card">
+        <h3>🔍 Escanear Pieza</h3>
+
+        <input type="text" id="codigo" placeholder="Escanee código aquí..." autofocus>
+        <button onclick="escanear()">Escanear</button>
+
+        <p id="mensaje"></p>
+    </div>
+
+    <!-- PAQUETES -->
+    <div class="card">
+        <h3>📦 Paquetes</h3>
+        <div class="paquetes-grid" id="paquetes"></div>
+    </div>
+
+    <!-- ADMINISTRACIÓN -->
+    <div class="card" style="border-left: 6px solid #dc2626;">
+        <h3>🔐 Administración (Supervisor)</h3>
+        <p class="mini">Funciones críticas: agregar/eliminar piezas o paquetes (requiere PIN + observación).</p>
+
+        <input type="password" id="pin_admin" placeholder="PIN Administrador">
+        <br><br>
+
+        <input type="text" id="obs_admin" placeholder="Observación obligatoria">
+        <br><br>
+
+        <div class="divider"></div>
+
+        <h4>📦 Agregar Paquete (con primera pieza)</h4>
+
+<input type="text" id="nuevo_paquete_admin" placeholder="Paquete nuevo (Ej: 9)">
+<br>
+
+<input type="text" id="codigo_paquete_admin" placeholder="Código primera pieza (Ej: 064-8371-0001)">
+<br>
+
+<input type="text" id="largo_paquete_admin" placeholder="Largo">
+<br>
+
+<input type="text" id="ancho_paquete_admin" placeholder="Ancho">
+<br>
+
+<input type="text" id="detalle_paquete_admin" placeholder="Detalle">
+<br>
+
+<button class="btn-green" onclick="adminAgregarPaquete()">📦 Agregar Paquete</button>
+
+<div class="divider"></div>
+
+
+        <h4>🗑 Eliminar Pieza</h4>
+        <input type="text" id="eliminar_codigo" placeholder="Código a eliminar (Ej: 064-8371-0007)">
+        <br>
+        <button style="background:#dc2626;" onclick="adminEliminarPieza()">🗑 Eliminar Pieza</button>
+
+        <div class="divider"></div>
+
+        <h4>📦 Eliminar Paquete Completo</h4>
+        <input type="text" id="eliminar_paquete" placeholder="Paquete a eliminar (Ej: 7)">
+        <br>
+        <button style="background:#dc2626;" onclick="adminEliminarPaquete()">📦 Eliminar Paquete</button>
+
+        <p id="msg_admin" class="msg-print"></p>
+    </div>
+
+</div>
+
+<footer>
+    Madecentro | SGI Piloto - Control de Empaque y Pistoleo
+</footer>
+
+<script>
+const PEDIDO_ID = {{ pedido_id | tojson }};
+const SESION_ID = {{ sesion_id | tojson }};
+
+let cargandoEstado = false;
+let escaneando = false;
+
+
+// ==============================
+// IMPRESIÓN DE ETIQUETAS
+// ==============================
+
+function imprimirEtiquetasPedido() {
+    document.getElementById("msg_print").innerText = "⏳ Generando PDF de etiquetas del pedido...";
+    document.getElementById("msg_print").style.color = "#111827";
+    window.open(`/etiquetas_pdf/todas/${PEDIDO_ID}`, "_blank");
+}
+
+function imprimirEtiquetasPaqueteManual() {
+    let paq = document.getElementById("paq_print").value.trim();
+
+    if (!paq) {
+        document.getElementById("msg_print").innerText = "❌ Debe ingresar el paquete";
+        document.getElementById("msg_print").style.color = "#dc2626";
+        return;
+    }
+
+    document.getElementById("msg_print").innerText = "⏳ Generando PDF de etiquetas del paquete...";
+    document.getElementById("msg_print").style.color = "#111827";
+
+    window.open(`/etiquetas_pdf/paquete/${PEDIDO_ID}/${encodeURIComponent(paq)}`, "_blank");
+}
+
+function imprimirEtiquetasPaquete(paquete) {
+    if (!paquete) {
+        alert("Paquete inválido");
+        return;
+    }
+
+    window.open(`/etiquetas_pdf/paquete/${PEDIDO_ID}/${encodeURIComponent(paquete)}`, "_blank");
+}
+
+function imprimirEtiquetaIndividual(codigo) {
+    if (!codigo) {
+        alert("Código inválido");
+        return;
+    }
+
+    window.open(`/etiquetas_pdf/individual/${PEDIDO_ID}/${encodeURIComponent(codigo)}`, "_blank");
+}
+
+
+// ==============================
+// CARGAR ESTADO
+// ==============================
+
+async function cargarEstado() {
+    if (cargandoEstado) return;
+    cargandoEstado = true;
+
+    try {
+        let res = await fetch(`/estado/${PEDIDO_ID}`);
+
+        if (!res.ok) {
+            document.getElementById("mensaje").innerText = "❌ Error consultando estado";
+            document.getElementById("mensaje").style.color = "#dc2626";
+            cargandoEstado = false;
+            return;
+        }
+
+        let data = await res.json();
+
+        document.getElementById("pedido").innerText = data.pedido;
+        document.getElementById("cliente").innerText = data.cliente;
+
+        document.getElementById("total").innerText = data.total;
+        document.getElementById("escaneadas").innerText = data.escaneadas;
+        document.getElementById("pendientes").innerText = data.pendientes;
+
+        document.getElementById("avance_general").innerText = data.porcentaje + "%";
+
+        let barra = document.getElementById("barra_general");
+        barra.style.width = data.porcentaje + "%";
+        barra.innerText = data.porcentaje + "%";
+
+        if (data.porcentaje == 100) {
+            barra.classList.add("ok");
+        } else {
+            barra.classList.remove("ok");
+        }
+
+        let paquetesHTML = "";
+
+        data.paquetes.forEach(paq => {
+
+            let clasePaquete = paq.porcentaje == 100 ? "paquete paquete-completo" : "paquete";
+            let tagCompleto = paq.porcentaje == 100 ? "<div class='tag-completo'>COMPLETO</div>" : "";
+            let claseBarra = paq.porcentaje == 100 ? "progress-fill ok" : "progress-fill";
+
+            paquetesHTML += `
+            <div class="${clasePaquete}">
+                ${tagCompleto}
+                <h4>📦 Paquete ${paq.paquete}</h4>
+                <p><b>Escaneadas:</b> ${paq.escaneadas} / ${paq.total} (${paq.porcentaje}%)</p>
+
+                <div class="progress-bar">
+                    <div class="${claseBarra}" style="width:${paq.porcentaje}%">${paq.porcentaje}%</div>
+                </div>
+
+                <div class="paquete-actions">
+                    <button class="btn-green btn-mini" onclick="imprimirEtiquetasPaquete('${paq.paquete}')">
+                        🏷️ Etiquetas Paquete
+                    </button>
+                </div>
+
+                <div style="margin-top:10px;">
+            `;
+
+            paq.piezas.forEach(p => {
+                let estado = p.escaneada
+                    ? "<span class='ok'>✔ OK</span>"
+                    : "<span class='pendiente'>❌ Pendiente</span>";
+
+                paquetesHTML += `
+                    <div class="pieza">
+                        <div class="pieza-info">
+                            ${p.codigo} | ${p.largo} x ${p.ancho}
+                        </div>
+
+                        <button class="btn-blue btn-mini" onclick="imprimirEtiquetaIndividual('${p.codigo}')">
+                            🏷️
+                        </button>
+
+                        ${estado}
+                    </div>
+                `;
+            });
+
+            paquetesHTML += `
+                </div>
+            </div>
+            `;
+        });
+
+        document.getElementById("paquetes").innerHTML = paquetesHTML;
+
+    } catch (error) {
+        console.log(error);
+        document.getElementById("mensaje").innerText = "❌ Error de conexión con el servidor";
+        document.getElementById("mensaje").style.color = "#dc2626";
+    }
+
+    cargandoEstado = false;
+}
+
+
+// ==============================
+// ESCANEAR
+// ==============================
+
+async function escanear() {
+    if (escaneando) return;
+    escaneando = true;
+
+    let codigo = document.getElementById("codigo").value.trim();
+
+    if (!codigo) {
+        escaneando = false;
+        return;
+    }
+
+    try {
+        let res = await fetch(`/escanear/${PEDIDO_ID}/${SESION_ID}`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({codigo: codigo})
+        });
+
+        let data = await res.json();
+
+        if (!res.ok) {
+            document.getElementById("mensaje").innerText = "❌ " + (data.detail || "Error en servidor");
+            document.getElementById("mensaje").style.color = "#dc2626";
+        } else {
+            document.getElementById("mensaje").innerText = "✅ Pieza escaneada correctamente";
+            document.getElementById("mensaje").style.color = "#16a34a";
+        }
+
+    } catch (error) {
+        document.getElementById("mensaje").innerText = "❌ Error de conexión";
+        document.getElementById("mensaje").style.color = "#dc2626";
+    }
+
+    document.getElementById("codigo").value = "";
+    document.getElementById("codigo").focus();
+
+    await cargarEstado();
+
+    escaneando = false;
+}
+
+
+// ==============================
+// ADMIN - FUNCIONES
+// ==============================
+
+function getAdminData() {
+    let pin = document.getElementById("pin_admin").value.trim();
+    let obs = document.getElementById("obs_admin").value.trim();
+
+    if (!pin || !obs) {
+        document.getElementById("msg_admin").innerText = "❌ Debe ingresar PIN y observación obligatoria";
+        document.getElementById("msg_admin").style.color = "#dc2626";
+        return null;
+    }
+
+    return { pin, obs };
+}
+
+
+// ==============================
+// ADMIN - AGREGAR PAQUETE (CON PRIMERA PIEZA)
+// ==============================
+
+async function adminAgregarPaquete() {
+    let admin = getAdminData();
+    if (!admin) return;
+
+    let paquete = document.getElementById("nuevo_paquete_admin").value.trim();
+    let codigo = document.getElementById("codigo_paquete_admin").value.trim();
+    let largo = document.getElementById("largo_paquete_admin").value.trim();
+    let ancho = document.getElementById("ancho_paquete_admin").value.trim();
+    let detalle = document.getElementById("detalle_paquete_admin").value.trim();
+
+    if (!paquete) {
+        document.getElementById("msg_admin").innerText = "❌ Debe ingresar el paquete";
+        document.getElementById("msg_admin").style.color = "#dc2626";
+        return;
+    }
+
+    if (!codigo) {
+        document.getElementById("msg_admin").innerText = "❌ Debe ingresar el código de la primera pieza";
+        document.getElementById("msg_admin").style.color = "#dc2626";
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("pedido_id", PEDIDO_ID);
+    formData.append("paquete", paquete);
+    formData.append("codigo_unico", codigo);
+    formData.append("largo", largo);
+    formData.append("ancho", ancho);
+    formData.append("detalle", detalle);
+    formData.append("pin", admin.pin);
+    formData.append("observacion", admin.obs);
+
+    try {
+        let res = await fetch("/admin/agregar_paquete", {
+            method: "POST",
+            body: formData
+        });
+
+        let data = await res.json();
+
+        if (!res.ok) {
+            document.getElementById("msg_admin").innerText = "❌ " + (data.detail || "Error agregando paquete");
+            document.getElementById("msg_admin").style.color = "#dc2626";
+            return;
+        }
+
+        document.getElementById("msg_admin").innerText = "✅ " + data.mensaje;
+        document.getElementById("msg_admin").style.color = "#16a34a";
+
+        // Limpiar campos
+        document.getElementById("nuevo_paquete_admin").value = "";
+        document.getElementById("codigo_paquete_admin").value = "";
+        document.getElementById("largo_paquete_admin").value = "";
+        document.getElementById("ancho_paquete_admin").value = "";
+        document.getElementById("detalle_paquete_admin").value = "";
+
+        await cargarEstado();
+
+    } catch (error) {
+        document.getElementById("msg_admin").innerText = "❌ Error de conexión";
+        document.getElementById("msg_admin").style.color = "#dc2626";
+    }
+}
+
+
+// ==============================
+// ADMIN - AGREGAR PIEZA
+// ==============================
+
+async function adminAgregarPieza() {
+    let admin = getAdminData();
+    if (!admin) return;
+
+    let codigo = document.getElementById("nuevo_codigo").value.trim();
+    let paquete = document.getElementById("nuevo_paquete").value.trim();
+    let largo = document.getElementById("nuevo_largo").value.trim();
+    let ancho = document.getElementById("nuevo_ancho").value.trim();
+    let detalle = document.getElementById("nuevo_detalle").value.trim();
+
+    if (!codigo) {
+        document.getElementById("msg_admin").innerText = "❌ Debe ingresar el código único";
+        document.getElementById("msg_admin").style.color = "#dc2626";
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("pedido_id", PEDIDO_ID);
+    formData.append("codigo_unico", codigo);
+    formData.append("paquete", paquete);
+    formData.append("largo", largo);
+    formData.append("ancho", ancho);
+    formData.append("detalle", detalle);
+    formData.append("pin", admin.pin);
+    formData.append("observacion", admin.obs);
+
+    try {
+        let res = await fetch("/admin/agregar_pieza", {
+            method: "POST",
+            body: formData
+        });
+
+        let data = await res.json();
+
+        if (!res.ok) {
+            document.getElementById("msg_admin").innerText = "❌ " + (data.detail || "Error agregando pieza");
+            document.getElementById("msg_admin").style.color = "#dc2626";
+            return;
+        }
+
+        document.getElementById("msg_admin").innerText = "✅ " + data.mensaje;
+        document.getElementById("msg_admin").style.color = "#16a34a";
+
+        document.getElementById("nuevo_codigo").value = "";
+        document.getElementById("nuevo_paquete").value = "";
+        document.getElementById("nuevo_largo").value = "";
+        document.getElementById("nuevo_ancho").value = "";
+        document.getElementById("nuevo_detalle").value = "";
+
+        await cargarEstado();
+
+    } catch (error) {
+        document.getElementById("msg_admin").innerText = "❌ Error de conexión";
+        document.getElementById("msg_admin").style.color = "#dc2626";
+    }
+}
+
+
+// ==============================
+// ADMIN - ELIMINAR PIEZA
+// ==============================
+
+async function adminEliminarPieza() {
+    let admin = getAdminData();
+    if (!admin) return;
+
+    let codigo = document.getElementById("eliminar_codigo").value.trim();
+
+    if (!codigo) {
+        document.getElementById("msg_admin").innerText = "❌ Debe ingresar el código a eliminar";
+        document.getElementById("msg_admin").style.color = "#dc2626";
+        return;
+    }
+
+    if (!confirm("¿Seguro desea eliminar esta pieza?")) return;
+
+    let formData = new FormData();
+    formData.append("pedido_id", PEDIDO_ID);
+    formData.append("codigo_unico", codigo);
+    formData.append("pin", admin.pin);
+    formData.append("observacion", admin.obs);
+
+    try {
+        let res = await fetch("/admin/eliminar_pieza", {
+            method: "POST",
+            body: formData
+        });
+
+        let data = await res.json();
+
+        if (!res.ok) {
+            document.getElementById("msg_admin").innerText = "❌ " + (data.detail || "Error eliminando pieza");
+            document.getElementById("msg_admin").style.color = "#dc2626";
+            return;
+        }
+
+        document.getElementById("msg_admin").innerText = "✅ " + data.mensaje;
+        document.getElementById("msg_admin").style.color = "#16a34a";
+
+        document.getElementById("eliminar_codigo").value = "";
+
+        await cargarEstado();
+
+    } catch (error) {
+        document.getElementById("msg_admin").innerText = "❌ Error de conexión";
+        document.getElementById("msg_admin").style.color = "#dc2626";
+    }
+}
+
+
+// ==============================
+// ADMIN - ELIMINAR PAQUETE
+// ==============================
+
+async function adminEliminarPaquete() {
+    let admin = getAdminData();
+    if (!admin) return;
+
+    let paquete = document.getElementById("eliminar_paquete").value.trim();
+
+    if (!paquete) {
+        document.getElementById("msg_admin").innerText = "❌ Debe ingresar el paquete a eliminar";
+        document.getElementById("msg_admin").style.color = "#dc2626";
+        return;
+    }
+
+    if (!confirm("¿Seguro desea eliminar TODO el paquete?")) return;
+
+    let formData = new FormData();
+    formData.append("pedido_id", PEDIDO_ID);
+    formData.append("paquete", paquete);
+    formData.append("pin", admin.pin);
+    formData.append("observacion", admin.obs);
+
+    try {
+        let res = await fetch("/admin/eliminar_paquete", {
+            method: "POST",
+            body: formData
+        });
+
+        let data = await res.json();
+
+        if (!res.ok) {
+            document.getElementById("msg_admin").innerText = "❌ " + (data.detail || "Error eliminando paquete");
+            document.getElementById("msg_admin").style.color = "#dc2626";
+            return;
+        }
+
+        document.getElementById("msg_admin").innerText = "✅ " + data.mensaje;
+        document.getElementById("msg_admin").style.color = "#16a34a";
+
+        document.getElementById("eliminar_paquete").value = "";
+
+        await cargarEstado();
+
+    } catch (error) {
+        document.getElementById("msg_admin").innerText = "❌ Error de conexión";
+        document.getElementById("msg_admin").style.color = "#dc2626";
+    }
+}
+
+
+// ==============================
+// EVENTOS ENTER
+// ==============================
+
+document.getElementById("codigo").addEventListener("keyup", function(e) {
+    if (e.key === "Enter") {
+        escanear();
+    }
+});
+
+document.getElementById("paq_print").addEventListener("keyup", function(e) {
+    if (e.key === "Enter") {
+        imprimirEtiquetasPaqueteManual();
+    }
+});
+
+
+// ==============================
+// INIT
+// ==============================
+
+cargarEstado();
+setInterval(cargarEstado, 3000);
+
+</script>
+
+</body>
+</html>
+
