@@ -66,17 +66,30 @@ DB_CONFIG = {
 # ==========================================================
 
 import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL:
-    # PRODUCCIÓN (Render)
+    # ======================================================
+    # PRODUCCIÓN (RENDER)
+    # ======================================================
+
+    # Render usa postgres:// y SQLAlchemy necesita postgresql://
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
+
     engine = create_engine(
         DATABASE_URL,
-        pool_pre_ping=True
+        pool_pre_ping=True,
+        pool_recycle=1800
     )
+
 else:
+    # ======================================================
     # LOCAL
+    # ======================================================
+
     DATABASE_URL = (
         f"postgresql://{DB_CONFIG['user']}:"
         f"{DB_CONFIG['password']}@"
@@ -86,7 +99,8 @@ else:
 
     engine = create_engine(
         DATABASE_URL,
-        pool_pre_ping=True
+        pool_pre_ping=True,
+        pool_recycle=1800
     )
 
 SessionLocal = sessionmaker(
@@ -94,20 +108,28 @@ SessionLocal = sessionmaker(
     autoflush=False,
     bind=engine
 )
+
 # ==========================================================
 # LOGS
 # ==========================================================
 
+import logging
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("SGI")
+
 # ==========================================================
 # BASES DISPONIBLES (MULTI-PLANTA)
 # ==========================================================
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+if os.getenv("DATABASE_URL"):
 
-if DATABASE_URL:
-    # PRODUCCIÓN (Render)
+    # ======================================================
+    # PRODUCCIÓN (RENDER)
+    # ======================================================
+
+    DATABASE_URL = os.getenv("DATABASE_URL").replace("postgres://", "postgresql://")
+
     DATABASES = {
         "050": DATABASE_URL,
         "051": DATABASE_URL,
@@ -117,8 +139,13 @@ if DATABASE_URL:
         "065": DATABASE_URL,
         "piloto": DATABASE_URL
     }
+
 else:
+
+    # ======================================================
     # LOCAL
+    # ======================================================
+
     DATABASES = {
         "050": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_050",
         "051": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_051",
@@ -126,8 +153,11 @@ else:
         "053": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_053",
         "064": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_064",
         "065": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_065",
+
+        # 🔥 BASE PILOTO
         "piloto": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_piloto",
     }
+
 # ==========================================================
 # CREAR ENGINES (1 POR PLANTA)
 # ==========================================================
@@ -142,6 +172,43 @@ engines = {
     for codigo, url in DATABASES.items()
 }
 
+# ==========================================================
+# CREAR SESSIONMAKERS
+# ==========================================================
+
+SessionLocals = {
+    codigo: sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=engine
+    )
+    for codigo, engine in engines.items()
+}
+
+# ==========================================================
+# FUNCIÓN CENTRAL MULTI-PLANTA
+# ==========================================================
+
+from fastapi import HTTPException
+
+def get_db(planta_codigo: str):
+    """
+    Devuelve la sesión correcta según la planta activa.
+    """
+
+    if not planta_codigo:
+        raise HTTPException(
+            status_code=401,
+            detail="No hay planta seleccionada en sesión"
+        )
+
+    if planta_codigo not in SessionLocals:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Planta inválida: {planta_codigo}"
+        )
+
+    return SessionLocals[planta_codigo]()
 # ==========================================================
 # 🔥 SINCRONIZAR ESTRUCTURA EN TODAS LAS PLANTAS
 # ==========================================================
