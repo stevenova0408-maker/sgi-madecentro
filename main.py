@@ -210,19 +210,31 @@ def get_db(planta_codigo: str):
 
     return SessionLocals[planta_codigo]()
 # ==========================================================
-# 🔥 SINCRONIZAR ESTRUCTURA EN TODAS LAS PLANTAS
+# CREAR TABLAS EN TODAS LAS PLANTAS (si no existen)
+# ==========================================================
+
+for codigo, engine in engines.items():
+    Base.metadata.create_all(bind=engine)
+    print(f"✔ Tablas verificadas/creadas en planta {codigo}")
+
+# ==========================================================
+# SINCRONIZAR ESTRUCTURA EN TODAS LAS PLANTAS
 # ==========================================================
 
 from sqlalchemy import text
 
 for codigo, engine in engines.items():
-    with engine.connect() as conn:
-        conn.execute(text("""
-            ALTER TABLE entrega_cedi
-            ADD COLUMN IF NOT EXISTS token_validacion VARCHAR(64);
-        """))
-        conn.commit()
-    print(f"✔ entrega_cedi sincronizada en planta {codigo}")
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("""
+                ALTER TABLE entrega_cedi
+                ADD COLUMN IF NOT EXISTS token_validacion VARCHAR(64);
+            """))
+            conn.commit()
+        print(f"✔ entrega_cedi sincronizada en planta {codigo}")
+    except Exception as e:
+        print(f"⚠ No se pudo sincronizar entrega_cedi en {codigo}: {e}")
+
 # ==========================================================
 # CREAR SESSIONMAKERS
 # ==========================================================
@@ -237,13 +249,14 @@ SessionLocals = {
 }
 
 # ==========================================================
-# FUNCIÓN CENTRAL MULTI-PLANTA (ÚNICA Y DEFINITIVA)
+# FUNCIÓN CENTRAL MULTI-PLANTA
 # ==========================================================
+
+from fastapi import HTTPException
 
 def get_db(planta_codigo: str):
     """
     Devuelve una sesión de base de datos según la planta activa.
-    Maneja validaciones y errores controlados.
     """
 
     if not planta_codigo:
@@ -259,7 +272,6 @@ def get_db(planta_codigo: str):
         )
 
     return SessionLocals[planta_codigo]()
-
 
 # ==========================================================
 # CONFIGURACIÓN CORREO SGI
