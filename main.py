@@ -62,28 +62,72 @@ DB_CONFIG = {
 }
 
 # ==========================================================
+# CONEXIÓN BASE DE DATOS
+# ==========================================================
+
+import os
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if DATABASE_URL:
+    # PRODUCCIÓN (Render)
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True
+    )
+else:
+    # LOCAL
+    DATABASE_URL = (
+        f"postgresql://{DB_CONFIG['user']}:"
+        f"{DB_CONFIG['password']}@"
+        f"{DB_CONFIG['host']}:"
+        f"{DB_CONFIG['port']}/sgi_madecentro_db"
+    )
+
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True
+    )
+
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
+# ==========================================================
 # LOGS
 # ==========================================================
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("SGI")
-
 # ==========================================================
 # BASES DISPONIBLES (MULTI-PLANTA)
 # ==========================================================
 
-DATABASES = {
-    "050": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_050",
-    "051": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_051",
-    "052": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_052",
-    "053": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_053",
-    "064": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_064",
-    "065": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_065",
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-    # 🔥 BASE PILOTO (IMPORTANTE)
-    "piloto": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_piloto",
-}
-
+if DATABASE_URL:
+    # PRODUCCIÓN (Render)
+    DATABASES = {
+        "050": DATABASE_URL,
+        "051": DATABASE_URL,
+        "052": DATABASE_URL,
+        "053": DATABASE_URL,
+        "064": DATABASE_URL,
+        "065": DATABASE_URL,
+        "piloto": DATABASE_URL
+    }
+else:
+    # LOCAL
+    DATABASES = {
+        "050": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_050",
+        "051": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_051",
+        "052": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_052",
+        "053": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_053",
+        "064": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_064",
+        "065": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_065",
+        "piloto": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_piloto",
+    }
 # ==========================================================
 # CREAR ENGINES (1 POR PLANTA)
 # ==========================================================
