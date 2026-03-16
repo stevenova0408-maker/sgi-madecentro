@@ -131,6 +131,180 @@ button:disabled{
     border-radius:10px;
     border:2px solid #e5e7eb;
 }
+
+/* === SEMAFORO CEDI (AGREGADO) === */
+
+.semaforo{
+    padding:8px 12px;
+    border-radius:8px;
+    font-weight:bold;
+    display:inline-block;
+    margin-top:5px;
+}
+
+.semaforo.VERDE{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.semaforo.NARANJA{
+    background:#fff7ed;
+    color:#c2410c;
+}
+
+.semaforo.ROJO{
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="left">
+        <img src="/static/logo.png">
+        <h2 style="margin:0;">SGI - Entrega Oficial al CEDI</h2>
+    </div>
+
+    <button class="secondary" onclick="window.location.href='/pedidos'">
+        ⬅ Volver a Pedidos
+    </button>
+</header>
+
+<div class="container">
+
+<div class="card">
+<h3>📦 Información del Pedido</h3>
+
+<p><b>Pedido:</b> <span id="pedido">-</span></p>
+<p><b>Cliente:</b> <span id="cliente">-</span></p>
+<p><b>Estado:</b> <span id="estado_badge" class="estado-badge badge-pendiente">PENDIENTE</span></p>
+
+<!-- NUEVA INFORMACION CEDI -->
+<p><b>Fecha lista despacho:</b> <span id="fecha_lista_despacho">-</span></p>
+<p><b>Días en CEDI:</b> <span id="dias_cedi">0</span></p>
+<div id="semaforo_cedi" class="semaforo VERDE">VERDE</div>
+
+<h4>Avance Pistoleo</h4>
+<div class="progress-bar">
+<div id="barra_pistoleo" class="progress-fill">0%</div>
+</div>
+
+<p><b>Total Paquetes:</b> <span id="total_paquetes">0</span></p>
+<p><b>Confirmados:</b> <span id="confirmados">0</span></p>
+<p><b>Pendientes:</b> <span id="pendientes">0</span></p>
+
+<h4>Avance Entrega</h4>
+<div class="progress-bar">
+<div id="barra_entrega" class="progress-fill">0%</div>
+</div>
+</div>
+
+<!-- TODO LO DEMAS ES EXACTAMENTE TU CODIGO ORIGINAL -->
+
+<div class="card">
+<h3>👤 Registro Responsable</h3>
+<input type="text" id="nombre" placeholder="Nombre Responsable">
+<br>
+<input type="text" id="cedula" placeholder="Cédula Responsable">
+<br>
+<button id="btn_iniciar" onclick="iniciarEntrega()">INICIAR ENTREGA</button>
+</div>
+
+<div class="card">
+<h3>⏱ Tiempo de Proceso (Máx 2 Horas)</h3>
+<div id="cronometro" class="cronometro ok">00:00:00</div>
+</div>
+
+<div class="card">
+<h3>📊 Confirmar Paquetes</h3>
+<input type="number" id="paquetes_input" placeholder="Cantidad confirmada">
+<br>
+<button id="btn_confirmar" class="green" onclick="finalizarConteo()">Confirmar Conteo</button>
+
+<hr style="margin:20px 0;">
+
+<h4 style="color:#dc2626;">🔐 Reinicio Supervisor</h4>
+<input type="password" id="pin_reinicio" placeholder="PIN Supervisor">
+<br>
+<input type="text" id="obs_reinicio" placeholder="Observación obligatoria">
+<br>
+<button class="red" onclick="reiniciarEntrega()">Reiniciar Conteo</button>
+</div>
+
+<div class="card">
+<h3>📷 Subir Remisión</h3>
+<input type="file" id="remision_file" accept="image/*">
+<br>
+<button class="blue" onclick="subirRemision()">Subir Remisión</button>
+<div id="preview"></div>
+</div>
+
+<div class="card">
+<h3>📄 Reporte y Envío</h3>
+<button class="secondary" onclick="generarPDF()">Generar Reporte PDF</button>
+<br><br>
+<input type="email" id="correo_manual" placeholder="Correo destino adicional">
+<br>
+<button id="btn_enviar" class="green" onclick="enviarCorreo()">Enviar Correo y Finalizar</button>
+<p id="mensaje"></p>
+</div>
+
+</div>
+
+<script>
+const PEDIDO_ID = {{ pedido_id }};
+let fechaInicio = null;
+let estadoActual = "PENDIENTE";
+let totalPaquetes = 0;
+
+/* ================= CONTROL CEDI (NUEVO) ================= */
+
+async function cargarControlCEDI(){
+
+    let res = await fetch("/api/pedidos_entrega?page=1&size=50");
+    let data = await res.json();
+
+    if(!data.data) return;
+
+    let pedido = data.data.find(p => p.id == PEDIDO_ID);
+
+    if(!pedido) return;
+
+    document.getElementById("fecha_lista_despacho").innerText =
+        pedido.fecha_lista_despacho || "-";
+
+    document.getElementById("dias_cedi").innerText =
+        pedido.dias_en_cedi ?? 0;
+
+    let sem = document.getElementById("semaforo_cedi");
+    sem.className = "semaforo " + pedido.semaforo_cedi;
+    sem.innerText = pedido.semaforo_cedi;
+}
+
+/* ================= CARGAR DATOS ================= */
+async function cargarDatos(){
+
+    let res = await fetch(`/api/entrega_cedi/${PEDIDO_ID}`);
+    let data = await res.json();
+
+    estadoActual = data.estado;
+
+    if(data.estado === "EN_CURSO" && data.fecha_inicio && !data.fecha_fin){
+        fechaInicio = new Date(data.fecha_inicio + "Z");
+    } else {
+        fechaInicio = null;
+    }
+
+    document.getElementById("confirmados").innerText = data.paquetes_confirmados || 0;
+
+    actualizarEstadoVisual();
+    await cargarPistoleo();
+    actualizarEntrega();
+    await cargarControlCEDI();
+}
 </style>
 </head>
 

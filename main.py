@@ -2088,6 +2088,9 @@ def api_pedidos_entrega(
 
         pedidos_dict = {p.id: p for p in pedidos}
 
+        # 🔵 TIEMPO ACTUAL EN UTC
+        ahora = datetime.utcnow()
+
         # Evitar duplicados si existen múltiples entregas del mismo pedido
         pedidos_agregados = set()
         resultado = []
@@ -2096,11 +2099,42 @@ def api_pedidos_entrega(
             pedido = pedidos_dict.get(entrega.pedido_id)
 
             if pedido and pedido.id not in pedidos_agregados:
+
+                # ==================================================
+                # CONTROL TIEMPO ENTRE PRODUCCIÓN Y CEDI
+                # ==================================================
+
+                dias_en_cedi = 0
+                semaforo_cedi = "VERDE"
+
+                if pedido.fecha_lista_despacho:
+
+                    dias_en_cedi = (
+                        ahora - pedido.fecha_lista_despacho
+                    ).days
+
+                    if dias_en_cedi <= 1:
+                        semaforo_cedi = "VERDE"
+                    elif dias_en_cedi == 2:
+                        semaforo_cedi = "NARANJA"
+                    else:
+                        semaforo_cedi = "ROJO"
+
                 resultado.append({
                     "id": pedido.id,
                     "numero_pedido": pedido.numero_pedido,
-                    "cliente": pedido.cliente
+                    "cliente": pedido.cliente,
+
+                    # 🔧 FECHA LISTA DESPACHO AJUSTADA A COLOMBIA
+                    "fecha_lista_despacho": (
+                        (pedido.fecha_lista_despacho - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
+                        if pedido.fecha_lista_despacho else None
+                    ),
+
+                    "dias_en_cedi": dias_en_cedi,
+                    "semaforo_cedi": semaforo_cedi
                 })
+
                 pedidos_agregados.add(pedido.id)
 
         # ======================================================
