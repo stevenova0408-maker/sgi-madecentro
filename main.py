@@ -23,7 +23,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 import os
@@ -1915,6 +1915,7 @@ async def subir_excel(
 
     finally:
         db.close()
+
 # ==========================================================
 # API PEDIDOS - PRODUCCIÓN
 # ==========================================================
@@ -1965,7 +1966,9 @@ def api_pedidos_produccion(
             # 🔥 CONTROL 24 HORAS DESDE CARGUE
             # ======================================================
 
-            fecha_cargue = p.fecha
+            # 🔧 AJUSTE ZONA HORARIA COLOMBIA (-5 horas)
+            fecha_cargue = p.fecha - timedelta(hours=5) if p.fecha else None
+
             horas_desde_cargue = 0
             alerta_24h = "OK"
 
