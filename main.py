@@ -2037,7 +2037,7 @@ def api_pedidos_produccion(
 
     finally:
         db.close()
-# ==========================================================
+# ========================================================== 
 # API PEDIDOS - ENTREGA CEDI
 # ==========================================================
 
@@ -2056,12 +2056,8 @@ def api_pedidos_entrega(
     db = get_db(planta)
 
     try:
-
-        resultado = []
-        pedidos_agregados = set()
-
         # ======================================================
-        # 1️⃣ ENTREGAS ACTIVAS (LÓGICA ORIGINAL)
+        # TRAER ENTREGAS ACTIVAS (NO ENVIADAS)
         # ======================================================
 
         entregas = (
@@ -2071,64 +2067,44 @@ def api_pedidos_entrega(
             .all()
         )
 
-        if entregas:
-
-            pedido_ids = list({e.pedido_id for e in entregas})
-
-            pedidos = db.query(Pedido).filter(
-                Pedido.id.in_(pedido_ids)
-            ).all()
-
-            pedidos_dict = {p.id: p for p in pedidos}
-
-            for entrega in entregas:
-                pedido = pedidos_dict.get(entrega.pedido_id)
-
-                if pedido and pedido.id not in pedidos_agregados:
-                    resultado.append({
-                        "id": pedido.id,
-                        "numero_pedido": pedido.numero_pedido,
-                        "cliente": pedido.cliente
-                    })
-
-                    pedidos_agregados.add(pedido.id)
+        if not entregas:
+            return {
+                "data": [],
+                "page": page,
+                "size": size,
+                "total_registros": 0,
+                "total_paginas": 1
+            }
 
         # ======================================================
-        # 2️⃣ AGREGAR PEDIDOS COMPLETADOS QUE NO TENGAN ENTREGA
+        # OBTENER PEDIDOS ÚNICOS
         # ======================================================
 
-        pedidos = db.query(Pedido).all()
+        pedido_ids = list({e.pedido_id for e in entregas})
 
-        for pedido in pedidos:
+        pedidos = db.query(Pedido).filter(
+            Pedido.id.in_(pedido_ids)
+        ).all()
 
-            if pedido.id in pedidos_agregados:
-                continue
+        pedidos_dict = {p.id: p for p in pedidos}
 
-            total = db.query(Pieza).filter(
-                Pieza.pedido_id == pedido.id
-            ).count()
+        # Evitar duplicados si existen múltiples entregas del mismo pedido
+        pedidos_agregados = set()
+        resultado = []
 
-            if total == 0:
-                continue
+        for entrega in entregas:
+            pedido = pedidos_dict.get(entrega.pedido_id)
 
-            escaneadas = db.query(Pieza).filter(
-                Pieza.pedido_id == pedido.id,
-                Pieza.escaneada.is_(True)
-            ).count()
-
-            # Pedido terminado de producción
-            if escaneadas == total:
-
+            if pedido and pedido.id not in pedidos_agregados:
                 resultado.append({
                     "id": pedido.id,
                     "numero_pedido": pedido.numero_pedido,
                     "cliente": pedido.cliente
                 })
-
                 pedidos_agregados.add(pedido.id)
 
         # ======================================================
-        # PAGINACIÓN (SIN CAMBIOS)
+        # PAGINACIÓN
         # ======================================================
 
         total_registros = len(resultado)
@@ -2147,6 +2123,7 @@ def api_pedidos_entrega(
 
     finally:
         db.close()
+
 # ==========================================================
 # ===================== DESPACHOS COMPLETO =================
 # ==========================================================
