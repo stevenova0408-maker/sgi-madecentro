@@ -147,17 +147,9 @@ text-align: center;
 <h1>SGI - Pedidos Cargados</h1>
 
 <div style="display:flex; gap:10px;">
-<button class="btn-secondary" onclick="window.location.href='/dashboard'">
-📊 Dashboard
-</button>
-
-<button class="btn-secondary" onclick="window.location.href='/login'">
-🏭 Cambiar Planta
-</button>
-
-<button class="btn-secondary" onclick="window.location.href='/logout'">
-🔓 Cerrar Sesión
-</button>
+<button class="btn-secondary" onclick="window.location.href='/dashboard'">📊 Dashboard</button>
+<button class="btn-secondary" onclick="window.location.href='/login'">🏭 Cambiar Planta</button>
+<button class="btn-secondary" onclick="window.location.href='/logout'">🔓 Cerrar Sesión</button>
 </div>
 </header>
 
@@ -181,154 +173,34 @@ text-align: center;
 </div>
 
 <div class="card">
+
 <div class="titulo-seccion">🏭 Pedidos para Entrega al CEDI</div>
+
+<div style="display:flex;gap:10px;margin-top:10px;margin-bottom:10px;font-weight:bold">
+
+<div style="background:#16a34a;color:white;padding:6px 12px;border-radius:8px">
+🟢 <span id="cedi_verde">0</span>
+</div>
+
+<div style="background:#f59e0b;color:white;padding:6px 12px;border-radius:8px">
+🟠 <span id="cedi_naranja">0</span>
+</div>
+
+<div style="background:#dc2626;color:white;padding:6px 12px;border-radius:8px">
+🔴 <span id="cedi_rojo">0</span>
+</div>
+
+</div>
+
 <div id="lista_entrega"></div>
-</div>
 
-</div>
-
-<div class="card">
-<div class="titulo-seccion">🚛 Pedidos en Despachos</div>
-
-<p style="margin-top:10px;">
-Consulta disponibilidad, carga base OVS y registra despachos.
-</p>
-
-<button class="btn-entrega"
-onclick="window.location.href='/despachos'">
-🚚 Consultar Disponibilidad Despachos
-</button>
-
-<button style="margin-left:10px;"
-onclick="cargarExcelDespachos()">
-📥 Cargar Base OVS
-</button>
-</div>
-
-<div class="card admin-box">
-<h3>🔐 Administración - Eliminar Pedido</h3>
-
-<div class="divider"></div>
-
-<input type="text" id="pedido_eliminar" placeholder="Número de pedido">
-<br><br>
-
-<input type="password" id="pin_eliminar" placeholder="PIN Supervisor">
-<br><br>
-
-<input type="text" id="obs_eliminar" placeholder="Observación">
-<br><br>
-
-<button onclick="eliminarPedido()">🗑 Eliminar Pedido</button>
-<p id="mensaje_eliminar" class="msg"></p>
 </div>
 
 </div>
 
 <script>
 
-let paginaActual = 1;
 const tamañoPagina = 5;
-
-async function subirExcel() {
-
-let archivo = document.getElementById("archivoExcel").files[0];
-
-if (!archivo) {
-document.getElementById("mensaje_excel").innerText = "❌ Seleccione un archivo Excel";
-return;
-}
-
-let formData = new FormData();
-formData.append("file", archivo);
-
-let res = await fetch("/subir_excel", {
-method: "POST",
-body: formData
-});
-
-let data = await res.json();
-
-if (!res.ok) {
-document.getElementById("mensaje_excel").innerText = "❌ " + (data.detail || "Error");
-return;
-}
-
-document.getElementById("mensaje_excel").innerText = "✅ " + data.mensaje;
-
-cargarProduccion(1);
-cargarEntrega(1);
-}
-
-async function cargarProduccion(page = 1) {
-
-paginaActual = page;
-
-let res = await fetch(`/api/pedidos_produccion?page=${page}&size=${tamañoPagina}`);
-if (!res.ok) return;
-
-let response = await res.json();
-let data = response.data || [];
-let totalPaginas = response.total_paginas || 1;
-
-let htmlProduccion = "";
-
-if (data.length === 0) {
-htmlProduccion = "<p>📭 No hay pedidos en producción.</p>";
-} else {
-
-data.forEach(p => {
-
-let clase = p.semaforo === "EN CURSO" ? "amarillo" : "rojo";
-
-htmlProduccion += `
-<div class="pedido-item">
-
-<p><b>Pedido:</b> ${p.numero_pedido}</p>
-<p><b>Cliente:</b> ${p.cliente}</p>
-
-<p><b>${p.escaneadas}/${p.total_piezas}</b> (${p.porcentaje}%)</p>
-
-<p><span class="semaforo ${clase}">${p.semaforo}</span></p>
-
-<!-- NUEVO -->
-<p><b>Fecha cargue:</b> ${p.fecha_cargue ?? "-"}</p>
-
-<!-- NUEVO -->
-<p><b>Horas desde cargue:</b> ${p.horas_desde_cargue ?? 0} h</p>
-
-<!-- NUEVO -->
-<p>
-<span class="semaforo ${p.alerta_24h === "ATRASADO" ? "rojo" : "verde"}">
-${p.alerta_24h ?? "OK"}
-</span>
-</p>
-
-<button onclick="window.location.href='/iniciar_sesion/${p.id}'">
-🔍 Ingresar a Pistoleo
-</button>
-
-</div>
-`;
-});
-
-htmlProduccion += `
-<div class="paginacion">
-<button ${page === 1 ? "disabled" : ""} 
-onclick="cargarProduccion(${page - 1})">
-⬅
-</button>
-Página ${page} de ${totalPaginas}
-<button ${page >= totalPaginas ? "disabled" : ""} 
-onclick="cargarProduccion(${page + 1})">
-➡
-</button>
-</div>
-`;
-}
-
-document.getElementById("lista_pedidos").innerHTML = htmlProduccion;
-}
 
 async function cargarEntrega(page = 1) {
 
@@ -339,18 +211,52 @@ let response = await res.json();
 let data = response.data || [];
 let totalPaginas = response.total_paginas || 1;
 
+let verde = 0;
+let naranja = 0;
+let rojo = 0;
+
+data.forEach(p => {
+if (p.semaforo === "VERDE") verde++;
+if (p.semaforo === "NARANJA") naranja++;
+if (p.semaforo === "ROJO") rojo++;
+});
+
+let v = document.getElementById("cedi_verde");
+let n = document.getElementById("cedi_naranja");
+let r = document.getElementById("cedi_rojo");
+
+if (v) v.innerText = verde;
+if (n) n.innerText = naranja;
+if (r) r.innerText = rojo;
+
 let htmlEntrega = "";
 
 if (data.length === 0) {
+
 htmlEntrega = "<p>📭 No hay pedidos listos para entrega.</p>";
+
 } else {
 
 data.forEach(p => {
 
+let claseSemaforo =
+p.semaforo === "VERDE" ? "verde" :
+p.semaforo === "NARANJA" ? "amarillo" : "rojo";
+
 htmlEntrega += `
 <div class="pedido-item">
+
 <p><b>Pedido:</b> ${p.numero_pedido}</p>
+
 <p><b>Cliente:</b> ${p.cliente}</p>
+
+<p><b>Fecha ingreso CEDI:</b> ${p.fecha_entrada_cedi ?? "-"}</p>
+
+<p>
+<span class="semaforo ${claseSemaforo}">
+${p.semaforo ?? "-"}
+</span>
+</p>
 
 <button class="btn-entrega"
 onclick="window.location.href='/entrega_cedi/${p.id}'">
@@ -363,55 +269,21 @@ onclick="window.location.href='/entrega_cedi/${p.id}'">
 
 htmlEntrega += `
 <div class="paginacion">
-<button ${page === 1 ? "disabled" : ""} 
-onclick="cargarEntrega(${page - 1})">
-⬅
-</button>
+<button ${page === 1 ? "disabled" : ""} onclick="cargarEntrega(${page - 1})">⬅</button>
 Página ${page} de ${totalPaginas}
-<button ${page >= totalPaginas ? "disabled" : ""} 
-onclick="cargarEntrega(${page + 1})">
-➡
-</button>
+<button ${page >= totalPaginas ? "disabled" : ""} onclick="cargarEntrega(${page + 1})">➡</button>
 </div>
 `;
+
 }
 
 document.getElementById("lista_entrega").innerHTML = htmlEntrega;
+
 }
 
-async function eliminarPedido() {
-
-let pedido = document.getElementById("pedido_eliminar").value.trim();
-let pin = document.getElementById("pin_eliminar").value.trim();
-let obs = document.getElementById("obs_eliminar").value.trim();
-
-if (!pedido || !pin || !obs) return;
-
-let formData = new FormData();
-formData.append("numero_pedido", pedido);
-formData.append("pin", pin);
-formData.append("observacion", obs);
-
-let res = await fetch("/admin/eliminar_pedido", {
-method: "POST",
-body: formData
-});
-
-let data = await res.json();
-
-if (res.ok) {
-document.getElementById("mensaje_eliminar").innerText = "✅ Pedido eliminado";
-cargarProduccion(1);
-cargarEntrega(1);
-} else {
-document.getElementById("mensaje_eliminar").innerText = "❌ " + (data.detail || "Error");
-}
-}
-
-cargarProduccion(1);
 cargarEntrega(1);
 
 </script>
 
 </body>
-</html/api/pedidos_produccion
+</html>
