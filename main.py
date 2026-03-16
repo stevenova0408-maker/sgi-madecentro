@@ -2083,6 +2083,8 @@ def api_pedidos_produccion(
 
     finally:
         db.close()
+
+
 # ==========================================================
 # API PEDIDOS - ENTREGA CEDI
 # ==========================================================
@@ -2121,7 +2123,6 @@ def api_pedidos_entrega(
                 "total_registros": 0,
                 "total_paginas": 1,
 
-                # PANEL SEMÁFORO (AGREGADO)
                 "panel_semaforo": {
                     "verde": 0,
                     "naranja": 0,
@@ -2137,32 +2138,27 @@ def api_pedidos_entrega(
 
         # pedidos que ya tienen entrega iniciada
         pedidos_entrega = db.query(Pedido).filter(
-        Pedido.id.in_(pedido_ids)
+            Pedido.id.in_(pedido_ids)
         ).all()
 
         # pedidos que ya terminaron producción
         pedidos_completados = db.query(Pedido).filter(
-        Pedido.estado == "COMPLETADO"
+            Pedido.estado == "COMPLETADO"
         ).all()
 
         # unir ambos sin duplicar
         pedidos_dict = {p.id: p for p in pedidos_entrega}
 
         for p in pedidos_completados:
-        if p.id not in pedidos_dict:
-        pedidos_dict[p.id] = p
+            if p.id not in pedidos_dict:
+                pedidos_dict[p.id] = p
 
         ahora = datetime.now()
-
-        # ======================================================
-        # CONTADORES PANEL SEMÁFORO (AGREGADO)
-        # ======================================================
 
         contador_verde = 0
         contador_naranja = 0
         contador_rojo = 0
 
-        # Evitar duplicados si existen múltiples entregas del mismo pedido
         pedidos_agregados = set()
         resultado = []
 
@@ -2175,8 +2171,14 @@ def api_pedidos_entrega(
                 # FECHA ENTRADA A CEDI
                 # ==================================================
 
-                # AJUSTE: usar fecha_cargue del pedido
-                fecha_entrada = entrega.fecha_inicio or pedido.fecha_cargue
+                fecha_entrada = entrega.fecha_inicio or pedido.fecha
+
+                # 🔥 SI EL PEDIDO YA ESTÁ COMPLETADO Y NO TIENE FECHA
+                # REGISTRAR AUTOMÁTICAMENTE LA FECHA DE INGRESO A CEDI
+                if pedido.estado == "COMPLETADO" and not entrega.fecha_inicio:
+                    entrega.fecha_inicio = datetime.utcnow()
+                    db.commit()
+                    fecha_entrada = entrega.fecha_inicio
 
                 dias = 0
                 semaforo = "VERDE"
@@ -2202,11 +2204,11 @@ def api_pedidos_entrega(
                     "numero_pedido": pedido.numero_pedido,
                     "cliente": pedido.cliente,
 
-                    # NUEVOS CAMPOS (no rompen frontend)
                     "fecha_entrada_cedi": (
                         fecha_entrada.strftime("%Y-%m-%d %H:%M")
                         if fecha_entrada else None
                     ),
+
                     "dias_disponible": dias,
                     "semaforo": semaforo
                 })
@@ -2229,10 +2231,6 @@ def api_pedidos_entrega(
             "size": size,
             "total_registros": total_registros,
             "total_paginas": total_paginas,
-
-            # ==================================================
-            # PANEL SEMÁFORO (AGREGADO)
-            # ==================================================
 
             "panel_semaforo": {
                 "verde": contador_verde,
