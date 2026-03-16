@@ -182,6 +182,24 @@ text-align: center;
 
 <div class="card">
 <div class="titulo-seccion">🏭 Pedidos para Entrega al CEDI</div>
+
+<!-- PANEL SEMAFORO GLOBAL -->
+<div style="display:flex;gap:10px;margin-top:10px;margin-bottom:10px;font-weight:bold">
+
+<div style="background:#16a34a;color:white;padding:6px 12px;border-radius:8px">
+🟢 <span id="cedi_verde">0</span>
+</div>
+
+<div style="background:#f59e0b;color:white;padding:6px 12px;border-radius:8px">
+🟠 <span id="cedi_naranja">0</span>
+</div>
+
+<div style="background:#dc2626;color:white;padding:6px 12px;border-radius:8px">
+🔴 <span id="cedi_rojo">0</span>
+</div>
+
+</div>
+
 <div id="lista_entrega"></div>
 </div>
 
@@ -271,6 +289,28 @@ let response = await res.json();
 let data = response.data || [];
 let totalPaginas = response.total_paginas || 1;
 
+/* ================= SEMAFORO GLOBAL ================= */
+
+let verde = 0;
+let naranja = 0;
+let rojo = 0;
+
+data.forEach(p => {
+
+if (p.semaforo === "VERDE") verde++;
+if (p.semaforo === "NARANJA") naranja++;
+if (p.semaforo === "ROJO") rojo++;
+
+});
+
+let v = document.getElementById("cedi_verde");
+let n = document.getElementById("cedi_naranja");
+let r = document.getElementById("cedi_rojo");
+
+if(v) v.innerText = verde;
+if(n) n.innerText = naranja;
+if(r) r.innerText = rojo;
+
 let htmlProduccion = "";
 
 if (data.length === 0) {
@@ -286,6 +326,15 @@ htmlProduccion += `
 
 <p><b>Pedido:</b> ${p.numero_pedido}</p>
 <p><b>Cliente:</b> ${p.cliente}</p>
+<p><b>Fecha ingreso CEDI:</b> ${p.fecha_entrada_cedi ?? "-"}</p>
+<p>
+<span class="semaforo ${
+p.semaforo === "VERDE" ? "verde" :
+p.semaforo === "NARANJA" ? "amarillo" : "rojo"
+}">
+${p.semaforo ?? "-"}
+</span>
+</p>
 
 <p><b>${p.escaneadas}/${p.total_piezas}</b> (${p.porcentaje}%)</p>
 
@@ -339,6 +388,30 @@ let response = await res.json();
 let data = response.data || [];
 let totalPaginas = response.total_paginas || 1;
 
+/* ================= SEMAFORO GLOBAL ================= */
+
+let verde = 0;
+let naranja = 0;
+let rojo = 0;
+
+data.forEach(p => {
+
+if (p.semaforo === "VERDE") verde++;
+if (p.semaforo === "NARANJA") naranja++;
+if (p.semaforo === "ROJO") rojo++;
+
+});
+
+let v = document.getElementById("cedi_verde");
+let n = document.getElementById("cedi_naranja");
+let r = document.getElementById("cedi_rojo");
+
+if(v) v.innerText = verde;
+if(n) n.innerText = naranja;
+if(r) r.innerText = rojo;
+
+/* ================================================== */
+
 let htmlEntrega = "";
 
 if (data.length === 0) {
@@ -349,8 +422,21 @@ data.forEach(p => {
 
 htmlEntrega += `
 <div class="pedido-item">
+
 <p><b>Pedido:</b> ${p.numero_pedido}</p>
+
 <p><b>Cliente:</b> ${p.cliente}</p>
+
+<p><b>Fecha ingreso CEDI:</b> ${p.fecha_entrada_cedi ?? "-"}</p>
+
+<p>
+<span class="semaforo ${
+p.semaforo === "VERDE" ? "verde" :
+p.semaforo === "NARANJA" ? "amarillo" : "rojo"
+}">
+${p.semaforo ?? "-"}
+</span>
+</p>
 
 <button class="btn-entrega"
 onclick="window.location.href='/entrega_cedi/${p.id}'">
