@@ -2165,7 +2165,7 @@ def api_pedidos_entrega(
                 # ==================================================
 
                 # AJUSTE: usar fecha_cargue del pedido
-                fecha_entrada = pedido.fecha_cargue
+                fecha_entrada = entrega.fecha_inicio or pedido.fecha_cargue
 
                 dias = 0
                 semaforo = "VERDE"
