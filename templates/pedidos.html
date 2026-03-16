@@ -1,228 +1,227 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Pedidos - SGI Madecentro</title>
+<meta charset="UTF-8">
+<title>Pedidos - SGI Madecentro</title>
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #ffffff, #fff4e6);
-            margin: 0;
-            padding: 0;
-            color: #111827;
-        }
+<style>
+body {
+font-family: Arial, sans-serif;
+background: linear-gradient(135deg, #ffffff, #fff4e6);
+margin: 0;
+padding: 0;
+color: #111827;
+}
 
-        header {
-            background: #ff7a00;
-            padding: 18px 30px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
-        }
+header {
+background: #ff7a00;
+padding: 18px 30px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
+}
 
-        header img { height: 55px; }
+header img { height: 55px; }
 
-        header h1 {
-            margin: 0;
-            font-size: 22px;
-            color: white;
-            font-weight: bold;
-        }
+header h1 {
+margin: 0;
+font-size: 22px;
+color: white;
+font-weight: bold;
+}
 
-        .container {
-            padding: 25px;
-            max-width: 1400px;
-            margin: auto;
-        }
+.container {
+padding: 25px;
+max-width: 1400px;
+margin: auto;
+}
 
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
+.grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 20px;
+}
 
-        .card {
-            background: white;
-            padding: 18px;
-            border-radius: 14px;
-            margin-bottom: 18px;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.08);
-            border-left: 6px solid #ff7a00;
-        }
+.card {
+background: white;
+padding: 18px;
+border-radius: 14px;
+margin-bottom: 18px;
+box-shadow: 0px 4px 10px rgba(0,0,0,0.08);
+border-left: 6px solid #ff7a00;
+}
 
-        button {
-            padding: 12px 18px;
-            font-size: 15px;
-            cursor: pointer;
-            background: #ff7a00;
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            margin-top: 8px;
-        }
+button {
+padding: 12px 18px;
+font-size: 15px;
+cursor: pointer;
+background: #ff7a00;
+border: none;
+border-radius: 8px;
+color: white;
+font-weight: bold;
+margin-top: 8px;
+}
 
-        button:hover { background: #e56d00; }
+button:hover { background: #e56d00; }
 
-        button:disabled {
-            background: #9ca3af;
-            cursor: not-allowed;
-        }
+button:disabled {
+background: #9ca3af;
+cursor: not-allowed;
+}
 
-        input {
-            padding: 12px;
-            width: 100%;
-            max-width: 350px;
-            font-size: 15px;
-            border-radius: 8px;
-            border: 2px solid #d1d5db;
-            outline: none;
-            box-sizing: border-box;
-        }
+input {
+padding: 12px;
+width: 100%;
+max-width: 350px;
+font-size: 15px;
+border-radius: 8px;
+border: 2px solid #d1d5db;
+outline: none;
+box-sizing: border-box;
+}
 
-        input:focus { border: 2px solid #ff7a00; }
+input:focus { border: 2px solid #ff7a00; }
 
-        .pedido-item {
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-        }
+.pedido-item {
+padding: 12px;
+border-bottom: 1px solid #eee;
+}
 
-        .pedido-item:last-child { border-bottom: none; }
+.pedido-item:last-child { border-bottom: none; }
 
-        .pedido-item b { color: #ff7a00; }
+.pedido-item b { color: #ff7a00; }
 
-        .semaforo {
-            font-weight: bold;
-            padding: 6px 10px;
-            border-radius: 8px;
-            display: inline-block;
-            color: white;
-            font-size: 13px;
-        }
+.semaforo {
+font-weight: bold;
+padding: 6px 10px;
+border-radius: 8px;
+display: inline-block;
+color: white;
+font-size: 13px;
+}
 
-        .rojo { background: #dc2626; }
-        .amarillo { background: #f59e0b; }
-        .verde { background: #16a34a; }
+.rojo { background: #dc2626; }
+.amarillo { background: #f59e0b; }
+.verde { background: #16a34a; }
 
-        .btn-secondary { background: #111827; }
-        .btn-secondary:hover { background: #000000; }
+.btn-secondary { background: #111827; }
+.btn-secondary:hover { background: #000000; }
 
-        .btn-entrega { background: #16a34a; }
-        .btn-entrega:hover { background: #15803d; }
+.btn-entrega { background: #16a34a; }
+.btn-entrega:hover { background: #15803d; }
 
-        .msg { margin-top: 10px; font-weight: bold; }
+.msg { margin-top: 10px; font-weight: bold; }
 
-        .admin-box {
-            margin-top: 20px;
-            padding: 12px;
-            border-radius: 10px;
-            background: #fff4e6;
-            border: 1px solid #ff7a00;
-        }
+.admin-box {
+margin-top: 20px;
+padding: 12px;
+border-radius: 10px;
+background: #fff4e6;
+border: 1px solid #ff7a00;
+}
 
-        .divider {
-            height: 1px;
-            background: #eee;
-            margin: 15px 0;
-        }
+.divider {
+height: 1px;
+background: #eee;
+margin: 15px 0;
+}
 
-        .mini {
-            font-size: 13px;
-            color: #6b7280;
-        }
+.mini {
+font-size: 13px;
+color: #6b7280;
+}
 
-        .paginacion {
-            margin-top: 15px;
-            text-align: center;
-        }
-    </style>
+.paginacion {
+margin-top: 15px;
+text-align: center;
+}
+</style>
 </head>
 
 <body>
 
 <header>
-    <img src="/static/logo.png" alt="Madecentro">
-    <h1>SGI - Pedidos Cargados</h1>
+<img src="/static/logo.png" alt="Madecentro">
+<h1>SGI - Pedidos Cargados</h1>
 
-    <!-- BOTONES DE CONTROL (AGREGADOS SIN MODIFICAR NADA MÁS) -->
-    <div style="display:flex; gap:10px;">
-        <button class="btn-secondary" onclick="window.location.href='/dashboard'">
-            📊 Dashboard
-        </button>
+<div style="display:flex; gap:10px;">
+<button class="btn-secondary" onclick="window.location.href='/dashboard'">
+📊 Dashboard
+</button>
 
-        <button class="btn-secondary" onclick="window.location.href='/login'">
-            🏭 Cambiar Planta
-        </button>
+<button class="btn-secondary" onclick="window.location.href='/login'">
+🏭 Cambiar Planta
+</button>
 
-        <button class="btn-secondary" onclick="window.location.href='/logout'">
-            🔓 Cerrar Sesión
-        </button>
-    </div>
+<button class="btn-secondary" onclick="window.location.href='/logout'">
+🔓 Cerrar Sesión
+</button>
+</div>
 </header>
 
 <div class="container">
 
-    <div class="card">
-        <h3>📥 Cargar Pedido (Excel)</h3>
-        <p class="mini">Cargue el archivo Excel exportado desde el sistema para registrar piezas y paquetes.</p>
+<div class="card">
+<h3>📥 Cargar Pedido (Excel)</h3>
+<p class="mini">Cargue el archivo Excel exportado desde el sistema para registrar piezas y paquetes.</p>
 
-        <input type="file" id="archivoExcel" accept=".xlsx">
-        <button onclick="subirExcel()">Cargar Excel</button>
+<input type="file" id="archivoExcel" accept=".xlsx">
+<button onclick="subirExcel()">Cargar Excel</button>
 
-        <p id="mensaje_excel" class="msg"></p>
-    </div>
+<p id="mensaje_excel" class="msg"></p>
+</div>
 
-    <div class="grid">
+<div class="grid">
 
-        <div class="card">
-            <div class="titulo-seccion">📦 Pedidos Disponibles (Producción)</div>
-            <div id="lista_pedidos"></div>
-        </div>
+<div class="card">
+<div class="titulo-seccion">📦 Pedidos Disponibles (Producción)</div>
+<div id="lista_pedidos"></div>
+</div>
 
-        <div class="card">
-            <div class="titulo-seccion">🏭 Pedidos para Entrega al CEDI</div>
-            <div id="lista_entrega"></div>
-        </div>
-    </div>
+<div class="card">
+<div class="titulo-seccion">🏭 Pedidos para Entrega al CEDI</div>
+<div id="lista_entrega"></div>
+</div>
 
-    <!-- 🚛 DESPACHOS -->
-    <div class="card">
-        <div class="titulo-seccion">🚛 Pedidos en Despachos</div>
+</div>
 
-        <p style="margin-top:10px;">
-            Consulta disponibilidad, carga base OVS y registra despachos.
-        </p>
+<div class="card">
+<div class="titulo-seccion">🚛 Pedidos en Despachos</div>
 
-        <button class="btn-entrega"
-            onclick="window.location.href='/despachos'">
-            🚚 Consultar Disponibilidad Despachos
-        </button>
+<p style="margin-top:10px;">
+Consulta disponibilidad, carga base OVS y registra despachos.
+</p>
 
-        <button style="margin-left:10px;"
-            onclick="cargarExcelDespachos()">
-            📥 Cargar Base OVS
-        </button>
-    </div>
+<button class="btn-entrega"
+onclick="window.location.href='/despachos'">
+🚚 Consultar Disponibilidad Despachos
+</button>
 
-    <div class="card admin-box">
-        <h3>🔐 Administración - Eliminar Pedido</h3>
+<button style="margin-left:10px;"
+onclick="cargarExcelDespachos()">
+📥 Cargar Base OVS
+</button>
+</div>
 
-        <div class="divider"></div>
+<div class="card admin-box">
+<h3>🔐 Administración - Eliminar Pedido</h3>
 
-        <input type="text" id="pedido_eliminar" placeholder="Número de pedido">
-        <br><br>
+<div class="divider"></div>
 
-        <input type="password" id="pin_eliminar" placeholder="PIN Supervisor">
-        <br><br>
+<input type="text" id="pedido_eliminar" placeholder="Número de pedido">
+<br><br>
 
-        <input type="text" id="obs_eliminar" placeholder="Observación">
-        <br><br>
+<input type="password" id="pin_eliminar" placeholder="PIN Supervisor">
+<br><br>
 
-        <button onclick="eliminarPedido()">🗑 Eliminar Pedido</button>
-        <p id="mensaje_eliminar" class="msg"></p>
-    </div>
+<input type="text" id="obs_eliminar" placeholder="Observación">
+<br><br>
+
+<button onclick="eliminarPedido()">🗑 Eliminar Pedido</button>
+<p id="mensaje_eliminar" class="msg"></p>
+</div>
 
 </div>
 
@@ -231,173 +230,188 @@
 let paginaActual = 1;
 const tamañoPagina = 5;
 
-/* ================= SUBIR EXCEL ================= */
 async function subirExcel() {
 
-    let archivo = document.getElementById("archivoExcel").files[0];
+let archivo = document.getElementById("archivoExcel").files[0];
 
-    if (!archivo) {
-        document.getElementById("mensaje_excel").innerText = "❌ Seleccione un archivo Excel";
-        return;
-    }
-
-    let formData = new FormData();
-    formData.append("file", archivo);
-
-    let res = await fetch("/subir_excel", {
-        method: "POST",
-        body: formData
-    });
-
-    let data = await res.json();
-
-    if (!res.ok) {
-        document.getElementById("mensaje_excel").innerText = "❌ " + (data.detail || "Error");
-        return;
-    }
-
-    document.getElementById("mensaje_excel").innerText = "✅ " + data.mensaje;
-
-    cargarProduccion(1);
-    cargarEntrega(1);
+if (!archivo) {
+document.getElementById("mensaje_excel").innerText = "❌ Seleccione un archivo Excel";
+return;
 }
 
-/* ================= PRODUCCIÓN ================= */
+let formData = new FormData();
+formData.append("file", archivo);
+
+let res = await fetch("/subir_excel", {
+method: "POST",
+body: formData
+});
+
+let data = await res.json();
+
+if (!res.ok) {
+document.getElementById("mensaje_excel").innerText = "❌ " + (data.detail || "Error");
+return;
+}
+
+document.getElementById("mensaje_excel").innerText = "✅ " + data.mensaje;
+
+cargarProduccion(1);
+cargarEntrega(1);
+}
+
 async function cargarProduccion(page = 1) {
 
-    paginaActual = page;
+paginaActual = page;
 
-    let res = await fetch(`/api/pedidos_produccion?page=${page}&size=${tamañoPagina}`);
-    if (!res.ok) return;
+let res = await fetch(`/api/pedidos_produccion?page=${page}&size=${tamañoPagina}`);
+if (!res.ok) return;
 
-    let response = await res.json();
-    let data = response.data || [];
-    let totalPaginas = response.total_paginas || 1;
+let response = await res.json();
+let data = response.data || [];
+let totalPaginas = response.total_paginas || 1;
 
-    let htmlProduccion = "";
+let htmlProduccion = "";
 
-    if (data.length === 0) {
-        htmlProduccion = "<p>📭 No hay pedidos en producción.</p>";
-    } else {
+if (data.length === 0) {
+htmlProduccion = "<p>📭 No hay pedidos en producción.</p>";
+} else {
 
-        data.forEach(p => {
+data.forEach(p => {
 
-            let clase = p.semaforo === "EN CURSO" ? "amarillo" : "rojo";
+let clase = p.semaforo === "EN CURSO" ? "amarillo" : "rojo";
 
-            htmlProduccion += `
-                <div class="pedido-item">
-                    <p><b>Pedido:</b> ${p.numero_pedido}</p>
-                    <p><b>Cliente:</b> ${p.cliente}</p>
-                    <p><b>${p.escaneadas}/${p.total_piezas}</b> (${p.porcentaje}%)</p>
-                    <p><span class="semaforo ${clase}">${p.semaforo}</span></p>
-                    <button onclick="window.location.href='/iniciar_sesion/${p.id}'">
-                        🔍 Ingresar a Pistoleo
-                    </button>
-                </div>
-            `;
-        });
+htmlProduccion += `
+<div class="pedido-item">
 
-        htmlProduccion += `
-            <div class="paginacion">
-                <button ${page === 1 ? "disabled" : ""} 
-                    onclick="cargarProduccion(${page - 1})">
-                    ⬅
-                </button>
-                Página ${page} de ${totalPaginas}
-                <button ${page >= totalPaginas ? "disabled" : ""} 
-                    onclick="cargarProduccion(${page + 1})">
-                    ➡
-                </button>
-            </div>
-        `;
-    }
+<p><b>Pedido:</b> ${p.numero_pedido}</p>
+<p><b>Cliente:</b> ${p.cliente}</p>
 
-    document.getElementById("lista_pedidos").innerHTML = htmlProduccion;
+<p><b>${p.escaneadas}/${p.total_piezas}</b> (${p.porcentaje}%)</p>
+
+<p><span class="semaforo ${clase}">${p.semaforo}</span></p>
+
+<!-- NUEVO -->
+<p><b>Fecha cargue:</b> ${p.fecha_cargue ?? "-"}</p>
+
+<!-- NUEVO -->
+<p><b>Horas desde cargue:</b> ${p.horas_desde_cargue ?? 0} h</p>
+
+<!-- NUEVO -->
+<p>
+<span class="semaforo ${p.alerta_24h === "ATRASADO" ? "rojo" : "verde"}">
+${p.alerta_24h ?? "OK"}
+</span>
+</p>
+
+<button onclick="window.location.href='/iniciar_sesion/${p.id}'">
+🔍 Ingresar a Pistoleo
+</button>
+
+</div>
+`;
+});
+
+htmlProduccion += `
+<div class="paginacion">
+<button ${page === 1 ? "disabled" : ""} 
+onclick="cargarProduccion(${page - 1})">
+⬅
+</button>
+Página ${page} de ${totalPaginas}
+<button ${page >= totalPaginas ? "disabled" : ""} 
+onclick="cargarProduccion(${page + 1})">
+➡
+</button>
+</div>
+`;
 }
 
-/* ================= ENTREGA CEDI ================= */
+document.getElementById("lista_pedidos").innerHTML = htmlProduccion;
+}
+
 async function cargarEntrega(page = 1) {
 
-    let res = await fetch(`/api/pedidos_entrega?page=${page}&size=${tamañoPagina}`);
-    if (!res.ok) return;
+let res = await fetch(`/api/pedidos_entrega?page=${page}&size=${tamañoPagina}`);
+if (!res.ok) return;
 
-    let response = await res.json();
-    let data = response.data || [];
-    let totalPaginas = response.total_paginas || 1;
+let response = await res.json();
+let data = response.data || [];
+let totalPaginas = response.total_paginas || 1;
 
-    let htmlEntrega = "";
+let htmlEntrega = "";
 
-    if (data.length === 0) {
-        htmlEntrega = "<p>📭 No hay pedidos listos para entrega.</p>";
-    } else {
+if (data.length === 0) {
+htmlEntrega = "<p>📭 No hay pedidos listos para entrega.</p>";
+} else {
 
-        data.forEach(p => {
+data.forEach(p => {
 
-            htmlEntrega += `
-                <div class="pedido-item">
-                    <p><b>Pedido:</b> ${p.numero_pedido}</p>
-                    <p><b>Cliente:</b> ${p.cliente}</p>
-                    <button class="btn-entrega"
-                        onclick="window.location.href='/entrega_cedi/${p.id}'">
-                        🚀 Iniciar Entrega CEDI
-                    </button>
-                </div>
-            `;
-        });
+htmlEntrega += `
+<div class="pedido-item">
+<p><b>Pedido:</b> ${p.numero_pedido}</p>
+<p><b>Cliente:</b> ${p.cliente}</p>
 
-        htmlEntrega += `
-            <div class="paginacion">
-                <button ${page === 1 ? "disabled" : ""} 
-                    onclick="cargarEntrega(${page - 1})">
-                    ⬅
-                </button>
-                Página ${page} de ${totalPaginas}
-                <button ${page >= totalPaginas ? "disabled" : ""} 
-                    onclick="cargarEntrega(${page + 1})">
-                    ➡
-                </button>
-            </div>
-        `;
-    }
+<button class="btn-entrega"
+onclick="window.location.href='/entrega_cedi/${p.id}'">
+🚀 Iniciar Entrega CEDI
+</button>
 
-    document.getElementById("lista_entrega").innerHTML = htmlEntrega;
+</div>
+`;
+});
+
+htmlEntrega += `
+<div class="paginacion">
+<button ${page === 1 ? "disabled" : ""} 
+onclick="cargarEntrega(${page - 1})">
+⬅
+</button>
+Página ${page} de ${totalPaginas}
+<button ${page >= totalPaginas ? "disabled" : ""} 
+onclick="cargarEntrega(${page + 1})">
+➡
+</button>
+</div>
+`;
 }
 
-/* ================= ELIMINAR PEDIDO ================= */
+document.getElementById("lista_entrega").innerHTML = htmlEntrega;
+}
+
 async function eliminarPedido() {
 
-    let pedido = document.getElementById("pedido_eliminar").value.trim();
-    let pin = document.getElementById("pin_eliminar").value.trim();
-    let obs = document.getElementById("obs_eliminar").value.trim();
+let pedido = document.getElementById("pedido_eliminar").value.trim();
+let pin = document.getElementById("pin_eliminar").value.trim();
+let obs = document.getElementById("obs_eliminar").value.trim();
 
-    if (!pedido || !pin || !obs) return;
+if (!pedido || !pin || !obs) return;
 
-    let formData = new FormData();
-    formData.append("numero_pedido", pedido);
-    formData.append("pin", pin);
-    formData.append("observacion", obs);
+let formData = new FormData();
+formData.append("numero_pedido", pedido);
+formData.append("pin", pin);
+formData.append("observacion", obs);
 
-    let res = await fetch("/admin/eliminar_pedido", {
-        method: "POST",
-        body: formData
-    });
+let res = await fetch("/admin/eliminar_pedido", {
+method: "POST",
+body: formData
+});
 
-    let data = await res.json();
+let data = await res.json();
 
-    if (res.ok) {
-        document.getElementById("mensaje_eliminar").innerText = "✅ Pedido eliminado";
-        cargarProduccion(1);
-        cargarEntrega(1);
-    } else {
-        document.getElementById("mensaje_eliminar").innerText = "❌ " + (data.detail || "Error");
-    }
+if (res.ok) {
+document.getElementById("mensaje_eliminar").innerText = "✅ Pedido eliminado";
+cargarProduccion(1);
+cargarEntrega(1);
+} else {
+document.getElementById("mensaje_eliminar").innerText = "❌ " + (data.detail || "Error");
+}
 }
 
-/* ================= INICIALIZAR ================= */
 cargarProduccion(1);
 cargarEntrega(1);
 
 </script>
 
 </body>
-</html>
+</html/api/pedidos_produccion

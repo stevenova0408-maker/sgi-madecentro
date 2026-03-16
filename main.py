@@ -1944,6 +1944,9 @@ def api_pedidos_produccion(
 
         resultado = []
 
+        # 🔵 TIEMPO ACTUAL (solo cálculo, no afecta nada)
+        ahora = datetime.utcnow()
+
         for p in pedidos:
 
             # 🔥 SOLO TRAER LO NECESARIO (no objetos completos)
@@ -1958,6 +1961,23 @@ def api_pedidos_produccion(
 
             porcentaje = int((escaneadas / total) * 100) if total > 0 else 0
 
+            # ======================================================
+            # 🔥 CONTROL 24 HORAS DESDE CARGUE
+            # ======================================================
+
+            fecha_cargue = p.fecha
+            horas_desde_cargue = 0
+            alerta_24h = "OK"
+
+            if fecha_cargue:
+
+                horas_desde_cargue = (
+                    ahora - fecha_cargue
+                ).total_seconds() / 3600
+
+                if horas_desde_cargue > 24 and porcentaje < 100:
+                    alerta_24h = "ATRASADO"
+
             # SOLO PRODUCCIÓN (no cumplidos)
             if porcentaje < 100:
 
@@ -1968,7 +1988,17 @@ def api_pedidos_produccion(
                     "total_piezas": total,
                     "escaneadas": escaneadas,
                     "porcentaje": porcentaje,
-                    "semaforo": "EN CURSO" if porcentaje > 0 else "PENDIENTE"
+                    "semaforo": "EN CURSO" if porcentaje > 0 else "PENDIENTE",
+
+                    # ==================================================
+                    # 🔥 CAMPOS NUEVOS PARA CONTROL OPERATIVO
+                    # ==================================================
+                    "fecha_cargue": (
+                        fecha_cargue.strftime("%Y-%m-%d %H:%M")
+                        if fecha_cargue else None
+                    ),
+                    "horas_desde_cargue": round(horas_desde_cargue, 2),
+                    "alerta_24h": alerta_24h
                 })
 
         # ======================================================
