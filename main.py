@@ -2104,6 +2104,33 @@ def api_pedidos_entrega(
     db = get_db(planta)
 
     try:
+
+        # ======================================================
+        # 🔥 NUEVO BLOQUE: CREAR REGISTROS AUTOMÁTICOS DE ENTREGA
+        # ======================================================
+
+        pedidos_completados_auto = db.query(Pedido).filter(
+            Pedido.estado == "COMPLETADO"
+        ).all()
+
+        for pedido in pedidos_completados_auto:
+
+            existe_entrega = db.query(EntregaCEDI).filter(
+                EntregaCEDI.pedido_id == pedido.id
+            ).first()
+
+            if not existe_entrega:
+
+                nueva_entrega = EntregaCEDI(
+                    pedido_id=pedido.id,
+                    fecha_inicio=datetime.utcnow(),
+                    correo_enviado=False
+                )
+
+                db.add(nueva_entrega)
+
+        db.commit()
+
         # ======================================================
         # TRAER ENTREGAS ACTIVAS (NO ENVIADAS)
         # ======================================================
