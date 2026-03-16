@@ -1970,12 +1970,20 @@ def api_pedidos_produccion(
 
             horas_desde_cargue = 0
             alerta_24h = "OK"
+            semaforo_tiempo = "VERDE"
 
             if fecha_cargue:
 
                 horas_desde_cargue = (
                     ahora - fecha_cargue
                 ).total_seconds() / 3600
+
+                if horas_desde_cargue < 12:
+                    semaforo_tiempo = "VERDE"
+                elif horas_desde_cargue < 24:
+                    semaforo_tiempo = "AMARILLO"
+                else:
+                    semaforo_tiempo = "ROJO"
 
                 if horas_desde_cargue > 24 and porcentaje < 100:
                     alerta_24h = "ATRASADO"
@@ -2003,7 +2011,8 @@ def api_pedidos_produccion(
                     ),
 
                     "horas_desde_cargue": round(horas_desde_cargue, 2),
-                    "alerta_24h": alerta_24h
+                    "alerta_24h": alerta_24h,
+                    "semaforo_tiempo": semaforo_tiempo
                 })
 
         # ======================================================
