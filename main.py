@@ -2135,13 +2135,24 @@ def api_pedidos_entrega(
 
         pedido_ids = list({e.pedido_id for e in entregas})
 
-        pedidos = db.query(Pedido).filter(
-            Pedido.id.in_(pedido_ids)
+        # pedidos que ya tienen entrega iniciada
+        pedidos_entrega = db.query(Pedido).filter(
+        Pedido.id.in_(pedido_ids)
         ).all()
 
-        pedidos_dict = {p.id: p for p in pedidos}
+        # pedidos que ya terminaron producción
+        pedidos_completados = db.query(Pedido).filter(
+        Pedido.estado == "COMPLETADO"
+        ).all()
 
-        ahora = datetime.utcnow()
+        # unir ambos sin duplicar
+        pedidos_dict = {p.id: p for p in pedidos_entrega}
+
+        for p in pedidos_completados:
+        if p.id not in pedidos_dict:
+        pedidos_dict[p.id] = p
+
+        ahora = datetime.now()
 
         # ======================================================
         # CONTADORES PANEL SEMÁFORO (AGREGADO)
