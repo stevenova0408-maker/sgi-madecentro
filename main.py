@@ -1223,6 +1223,12 @@ def api_entrega_cedi(request: Request, pedido_id: int):
             .first()
         )
 
+        # ======================================================
+        # TIEMPO ACTUAL (PARA CONTROL DE DÍAS)
+        # ======================================================
+
+        ahora = datetime.utcnow()
+
         if not entrega:
             return {
                 "existe": False,
@@ -1234,22 +1240,62 @@ def api_entrega_cedi(request: Request, pedido_id: int):
                 "paquetes_confirmados": 0,
                 "correo_destino": None,
                 "foto_remision": None,
-                "correo_enviado": False
+                "correo_enviado": False,
+
+                # ==================================================
+                # CAMPOS NUEVOS (NO AFECTAN LÓGICA EXISTENTE)
+                # ==================================================
+                "fecha_entrada_cedi": None,
+                "dias_disponible": 0,
+                "semaforo": "VERDE"
             }
+
+        # ======================================================
+        # CALCULAR SEMÁFORO DE DISPONIBILIDAD
+        # ======================================================
+
+        dias = 0
+        semaforo = "VERDE"
+
+        if entrega.fecha_inicio:
+
+            dias = (ahora - entrega.fecha_inicio).days
+
+            if dias <= 1:
+                semaforo = "VERDE"
+            elif dias == 2:
+                semaforo = "NARANJA"
+            else:
+                semaforo = "ROJO"
 
         return {
             "existe": True,
             "estado": entrega.estado,
             "cedula_responsable": entrega.cedula_responsable or "",
             "nombre_responsable": entrega.nombre_responsable or "",
+
             "fecha_inicio": entrega.fecha_inicio.strftime("%Y-%m-%d %H:%M:%S")
                 if entrega.fecha_inicio else None,
+
             "fecha_fin": entrega.fecha_fin.strftime("%Y-%m-%d %H:%M:%S")
                 if entrega.fecha_fin else None,
+
             "paquetes_confirmados": entrega.paquetes_confirmados or 0,
             "correo_destino": entrega.correo_destino,
             "foto_remision": entrega.foto_remision,
-            "correo_enviado": bool(entrega.correo_enviado)
+            "correo_enviado": bool(entrega.correo_enviado),
+
+            # ==================================================
+            # CAMPOS NUEVOS VISUALES (NO ROMPEN FRONTEND)
+            # ==================================================
+
+            "fecha_entrada_cedi": (
+                (entrega.fecha_inicio - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
+                if entrega.fecha_inicio else None
+            ),
+
+            "dias_disponible": dias,
+            "semaforo": semaforo
         }
 
     finally:
