@@ -1945,8 +1945,8 @@ def api_pedidos_produccion(
 
         resultado = []
 
-        # 🔵 TIEMPO ACTUAL (solo cálculo, no afecta nada)
-        ahora = datetime.now()
+        # 🔵 TIEMPO ACTUAL EN UTC (para que coincida con lo guardado en BD)
+        ahora = datetime.utcnow()
 
         for p in pedidos:
 
@@ -1966,8 +1966,7 @@ def api_pedidos_produccion(
             # 🔥 CONTROL 24 HORAS DESDE CARGUE
             # ======================================================
 
-            # 🔧 AJUSTE ZONA HORARIA COLOMBIA (-5 horas)
-            fecha_cargue = p.fecha - timedelta(hours=5) if p.fecha else None
+            fecha_cargue = p.fecha
 
             horas_desde_cargue = 0
             alerta_24h = "OK"
@@ -1996,10 +1995,13 @@ def api_pedidos_produccion(
                     # ==================================================
                     # 🔥 CAMPOS NUEVOS PARA CONTROL OPERATIVO
                     # ==================================================
+
+                    # 🔧 MOSTRAR HORA COLOMBIA (-5)
                     "fecha_cargue": (
-                        fecha_cargue.strftime("%Y-%m-%d %H:%M")
+                        (fecha_cargue - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
                         if fecha_cargue else None
                     ),
+
                     "horas_desde_cargue": round(horas_desde_cargue, 2),
                     "alerta_24h": alerta_24h
                 })
