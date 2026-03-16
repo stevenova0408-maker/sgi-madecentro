@@ -156,11 +156,6 @@ button:disabled{
 <p><b>Cliente:</b> <span id="cliente">-</span></p>
 <p><b>Estado:</b> <span id="estado_badge" class="estado-badge badge-pendiente">PENDIENTE</span></p>
 
-<!-- NUEVO PANEL CONTROL CEDI -->
-<p><b>Fecha entrada CEDI:</b> <span id="fecha_cedi">-</span></p>
-<p><b>Días disponible:</b> <span id="dias_cedi">0</span></p>
-<p><b>Semáforo:</b> <span id="semaforo_cedi">-</span></p>
-
 <h4>Avance Pistoleo</h4>
 <div class="progress-bar">
 <div id="barra_pistoleo" class="progress-fill">0%</div>
@@ -240,6 +235,7 @@ async function cargarDatos(){
 
     estadoActual = data.estado;
 
+    // CRONÓMETRO CONTROL
     if(data.estado === "EN_CURSO" && data.fecha_inicio && !data.fecha_fin){
         fechaInicio = new Date(data.fecha_inicio + "Z");
     } else {
@@ -247,20 +243,6 @@ async function cargarDatos(){
     }
 
     document.getElementById("confirmados").innerText = data.paquetes_confirmados || 0;
-
-    /* NUEVA INFORMACION CEDI */
-
-    if(data.fecha_entrada_cedi){
-        document.getElementById("fecha_cedi").innerText = data.fecha_entrada_cedi;
-    }
-
-    if(data.dias_disponible !== undefined){
-        document.getElementById("dias_cedi").innerText = data.dias_disponible;
-    }
-
-    if(data.semaforo){
-        document.getElementById("semaforo_cedi").innerText = data.semaforo;
-    }
 
     actualizarEstadoVisual();
     await cargarPistoleo();
@@ -289,8 +271,7 @@ async function cargarPistoleo(){
     document.getElementById("total_paquetes").innerText = totalPaquetes;
 }
 
-/* ================= RESTO DEL CÓDIGO ORIGINAL SIN CAMBIOS ================= */
-
+/* ================= ESTADO VISUAL ================= */
 function actualizarEstadoVisual(){
 
     let badge = document.getElementById("estado_badge");
@@ -318,6 +299,7 @@ function actualizarEstadoVisual(){
     }
 }
 
+/* ================= BARRA ENTREGA ================= */
 function actualizarEntrega(){
 
     let confirmados = parseInt(document.getElementById("confirmados").innerText) || 0;
@@ -336,7 +318,130 @@ function actualizarEntrega(){
     if(porcentaje == 100) barra.classList.add("ok");
 }
 
-/* resto JS igual */
+/* ================= ACCIONES ================= */
+
+async function iniciarEntrega(){
+    let nombre = document.getElementById("nombre").value.trim();
+    let cedula = document.getElementById("cedula").value.trim();
+
+    let form = new FormData();
+    form.append("nombre", nombre);
+    form.append("cedula", cedula);
+
+    let res = await fetch(`/api/entrega_cedi/iniciar/${PEDIDO_ID}`,{
+        method:"POST",
+        body:form
+    });
+
+    let data = await res.json();
+    document.getElementById("mensaje").innerText = data.mensaje || data.detail;
+
+    await cargarDatos();
+}
+
+async function finalizarConteo(){
+    let cant = document.getElementById("paquetes_input").value;
+
+    let form = new FormData();
+    form.append("paquetes_confirmados", cant);
+
+    let res = await fetch(`/api/entrega_cedi/finalizar/${PEDIDO_ID}`,{
+        method:"POST",
+        body:form
+    });
+
+    let data = await res.json();
+    document.getElementById("mensaje").innerText = data.mensaje || data.detail;
+
+    await cargarDatos();
+}
+
+async function reiniciarEntrega(){
+
+    let pin = document.getElementById("pin_reinicio").value;
+    let obs = document.getElementById("obs_reinicio").value;
+
+    let form = new FormData();
+    form.append("pin", pin);
+    form.append("observacion", obs);
+
+    let res = await fetch(`/api/entrega_cedi/reiniciar/${PEDIDO_ID}`,{
+        method:"POST",
+        body:form
+    });
+
+    let data = await res.json();
+    document.getElementById("mensaje").innerText = data.mensaje || data.detail;
+
+    await cargarDatos();
+}
+
+async function subirRemision(){
+
+    let file = document.getElementById("remision_file").files[0];
+    let form = new FormData();
+    form.append("archivo", file);
+
+    let res = await fetch(`/api/entrega_cedi/subir_remision/${PEDIDO_ID}`,{
+        method:"POST",
+        body:form
+    });
+
+    let data = await res.json();
+    document.getElementById("mensaje").innerText = data.mensaje || data.detail;
+
+    await cargarDatos();
+}
+
+async function enviarCorreo(){
+
+    let correo = document.getElementById("correo_manual").value;
+
+    let form = new FormData();
+    form.append("correo_destino", correo);
+
+    let res = await fetch(`/api/entrega_cedi/enviar_correo/${PEDIDO_ID}`,{
+        method:"POST",
+        body:form
+    });
+
+    let data = await res.json();
+    document.getElementById("mensaje").innerText = data.mensaje || data.detail;
+
+    if(res.ok){
+        // ⬇⬇⬇ AQUI ESTA LA CLAVE ⬇⬇⬇
+        window.location.href = "/pedidos";
+    }
+}
+
+function generarPDF(){
+    window.open(`/reporte_pdf/${PEDIDO_ID}?t=${new Date().getTime()}`, "_blank");
+}
+
+/* ================= CRONÓMETRO ================= */
+function actualizarCronometro(){
+
+    if(!fechaInicio) return;
+
+    let ahora = new Date();
+    let diff = Math.floor((ahora - fechaInicio) / 1000);
+
+    let horas = Math.floor(diff / 3600);
+    let minutos = Math.floor((diff % 3600) / 60);
+    let segundos = diff % 60;
+
+    let txt =
+        String(horas).padStart(2,'0') + ":" +
+        String(minutos).padStart(2,'0') + ":" +
+        String(segundos).padStart(2,'0');
+
+    let cron = document.getElementById("cronometro");
+    cron.innerText = txt;
+
+    if(diff < 5400) cron.className = "cronometro ok";
+    else if(diff < 7200) cron.className = "cronometro warn";
+    else cron.className = "cronometro danger";
+}
 
 setInterval(actualizarCronometro, 1000);
 cargarDatos();
