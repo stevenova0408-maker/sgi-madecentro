@@ -2119,7 +2119,14 @@ def api_pedidos_entrega(
                 "page": page,
                 "size": size,
                 "total_registros": 0,
-                "total_paginas": 1
+                "total_paginas": 1,
+
+                # PANEL SEMÁFORO (AGREGADO)
+                "panel_semaforo": {
+                    "verde": 0,
+                    "naranja": 0,
+                    "rojo": 0
+                }
             }
 
         # ======================================================
@@ -2135,6 +2142,14 @@ def api_pedidos_entrega(
         pedidos_dict = {p.id: p for p in pedidos}
 
         ahora = datetime.utcnow()
+
+        # ======================================================
+        # CONTADORES PANEL SEMÁFORO (AGREGADO)
+        # ======================================================
+
+        contador_verde = 0
+        contador_naranja = 0
+        contador_rojo = 0
 
         # Evitar duplicados si existen múltiples entregas del mismo pedido
         pedidos_agregados = set()
@@ -2160,10 +2175,15 @@ def api_pedidos_entrega(
 
                     if dias <= 1:
                         semaforo = "VERDE"
+                        contador_verde += 1
+
                     elif dias == 2:
                         semaforo = "NARANJA"
+                        contador_naranja += 1
+
                     else:
                         semaforo = "ROJO"
+                        contador_rojo += 1
 
                 resultado.append({
                     "id": pedido.id,
@@ -2196,7 +2216,17 @@ def api_pedidos_entrega(
             "page": page,
             "size": size,
             "total_registros": total_registros,
-            "total_paginas": total_paginas
+            "total_paginas": total_paginas,
+
+            # ==================================================
+            # PANEL SEMÁFORO (AGREGADO)
+            # ==================================================
+
+            "panel_semaforo": {
+                "verde": contador_verde,
+                "naranja": contador_naranja,
+                "rojo": contador_rojo
+            }
         }
 
     finally:
