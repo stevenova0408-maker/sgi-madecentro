@@ -2037,7 +2037,7 @@ def api_pedidos_produccion(
 
     finally:
         db.close()
-# ========================================================== 
+# ==========================================================
 # API PEDIDOS - ENTREGA CEDI
 # ==========================================================
 
@@ -2088,6 +2088,8 @@ def api_pedidos_entrega(
 
         pedidos_dict = {p.id: p for p in pedidos}
 
+        ahora = datetime.utcnow()
+
         # Evitar duplicados si existen múltiples entregas del mismo pedido
         pedidos_agregados = set()
         resultado = []
@@ -2096,11 +2098,41 @@ def api_pedidos_entrega(
             pedido = pedidos_dict.get(entrega.pedido_id)
 
             if pedido and pedido.id not in pedidos_agregados:
+
+                # ==================================================
+                # FECHA ENTRADA A CEDI
+                # ==================================================
+
+                fecha_entrada = entrega.fecha_inicio
+
+                dias = 0
+                semaforo = "VERDE"
+
+                if fecha_entrada:
+
+                    dias = (ahora - fecha_entrada).days
+
+                    if dias <= 1:
+                        semaforo = "VERDE"
+                    elif dias == 2:
+                        semaforo = "NARANJA"
+                    else:
+                        semaforo = "ROJO"
+
                 resultado.append({
                     "id": pedido.id,
                     "numero_pedido": pedido.numero_pedido,
-                    "cliente": pedido.cliente
+                    "cliente": pedido.cliente,
+
+                    # NUEVOS CAMPOS (no rompen frontend)
+                    "fecha_entrada_cedi": (
+                        fecha_entrada.strftime("%Y-%m-%d %H:%M")
+                        if fecha_entrada else None
+                    ),
+                    "dias_disponible": dias,
+                    "semaforo": semaforo
                 })
+
                 pedidos_agregados.add(pedido.id)
 
         # ======================================================
@@ -2123,7 +2155,6 @@ def api_pedidos_entrega(
 
     finally:
         db.close()
-
 # ==========================================================
 # ===================== DESPACHOS COMPLETO =================
 # ==========================================================
