@@ -151,6 +151,22 @@ button:disabled{
 
 <div class="card">
 <h3>📦 Información del Pedido</h3>
+<!-- PANEL SEMAFORO CEDI -->
+<div style="display:flex;gap:10px;margin-bottom:10px;font-weight:bold">
+
+<div style="background:#16a34a;color:white;padding:5px 10px;border-radius:6px">
+🟢 <span id="cedi_verde">0</span>
+</div>
+
+<div style="background:#f59e0b;color:white;padding:5px 10px;border-radius:6px">
+🟠 <span id="cedi_naranja">0</span>
+</div>
+
+<div style="background:#dc2626;color:white;padding:5px 10px;border-radius:6px">
+🔴 <span id="cedi_rojo">0</span>
+</div>
+
+</div>
 
 <p><b>Pedido:</b> <span id="pedido">-</span></p>
 <p><b>Cliente:</b> <span id="cliente">-</span></p>
@@ -232,7 +248,23 @@ async function cargarDatos(){
 
     let res = await fetch(`/api/entrega_cedi/${PEDIDO_ID}`);
     let data = await res.json();
+/* ================= PANEL SEMAFORO CEDI ================= */
 
+let panel = await fetch(`/api/pedidos_entrega?page=1&size=1`);
+let panelData = await panel.json();
+
+if(panelData.panel_semaforo){
+
+    document.getElementById("cedi_verde").innerText =
+        panelData.panel_semaforo.verde;
+
+    document.getElementById("cedi_naranja").innerText =
+        panelData.panel_semaforo.naranja;
+
+    document.getElementById("cedi_rojo").innerText =
+        panelData.panel_semaforo.rojo;
+
+}
     estadoActual = data.estado;
 
     // CRONÓMETRO CONTROL
