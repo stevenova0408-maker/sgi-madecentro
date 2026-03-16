@@ -2164,7 +2164,8 @@ def api_pedidos_entrega(
                 # FECHA ENTRADA A CEDI
                 # ==================================================
 
-                fecha_entrada = entrega.fecha_inicio
+                # AJUSTE: usar fecha_cargue del pedido
+                fecha_entrada = pedido.fecha_cargue
 
                 dias = 0
                 semaforo = "VERDE"
