@@ -664,7 +664,7 @@ def iniciar_entrega(request: Request, pedido_id: int):
             raise HTTPException(status_code=400, detail="La entrega ya fue iniciada")
 
         entrega.estado = "EN_CURSO"
-        entrega.fecha_inicio = datetime.utcnow()
+        entrega.fecha_inicio = datetime.now()
         entrega.fecha_fin = None
         entrega.paquetes_confirmados = 0
 
@@ -712,7 +712,7 @@ def finalizar_conteo(
 
         # 🔥 Detiene reloj
         entrega.paquetes_confirmados = paquetes_confirmados
-        entrega.fecha_fin = datetime.utcnow()
+        entrega.fecha_fin = datetime.now()
 
         db.commit()
 
@@ -761,7 +761,7 @@ def confirmar_paquetes(
 
         # 🔥 MISMO COMPORTAMIENTO
         entrega.paquetes_confirmados = paquetes
-        entrega.fecha_fin = datetime.utcnow()
+        entrega.fecha_fin = datetime.now()
 
         db.commit()
 
@@ -820,7 +820,7 @@ def enviar_correo(request: Request, pedido_id: int):
 
         entrega.estado = "COMPLETADO"
         entrega.correo_enviado = True
-        entrega.fecha_fin = datetime.utcnow()
+        entrega.fecha_fin = datetime.now()
 
         # ======================================================
         # ACTUALIZAR DESPACHOS
@@ -843,7 +843,7 @@ def enviar_correo(request: Request, pedido_id: int):
             print("OP ENCONTRADA:", op.numero_op)
 
             op.completada = True
-            op.fecha_entrega = datetime.utcnow()
+            op.fecha_entrega = datetime.now()
 
             ov = op.ov
 
@@ -857,7 +857,7 @@ def enviar_correo(request: Request, pedido_id: int):
                 if total_ops > 0 and completadas == total_ops:
                     ov.estado = "LISTA_PARA_DESPACHO"
                     if not ov.fecha_lista_despacho:
-                        ov.fecha_lista_despacho = datetime.utcnow()
+                        ov.fecha_lista_despacho = datetime.now()
                 else:
                     ov.estado = "EN_PROCESO"
 
@@ -1316,7 +1316,7 @@ def iniciar_entrega_cedi(
                 estado="EN_CURSO",
                 cedula_responsable=cedula,
                 nombre_responsable=nombre,
-                fecha_inicio=datetime.utcnow(),
+                fecha_inicio=datetime.now(),
                 fecha_fin=None,
                 paquetes_confirmados=0,
                 correo_enviado=False,
@@ -1333,7 +1333,7 @@ def iniciar_entrega_cedi(
             entrega.estado = "EN_CURSO"
             entrega.cedula_responsable = cedula
             entrega.nombre_responsable = nombre
-            entrega.fecha_inicio = datetime.utcnow()
+            entrega.fecha_inicio = datetime.now()
             entrega.fecha_fin = None
 
             # 🔥 Reinicio total de variables críticas
@@ -1404,7 +1404,7 @@ async def subir_remision(
 
         os.makedirs("remisiones", exist_ok=True)
 
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         nombre = f"REMISION_{pedido_id}_{timestamp}{ext}"
         ruta = os.path.join("remisiones", nombre)
@@ -1613,7 +1613,7 @@ SGI Madecentro
         entrega.estado = "COMPLETADO"
         entrega.correo_enviado = True
         entrega.correo_destino = ", ".join(destinatarios_to.union(destinatarios_cc))
-        entrega.fecha_fin = datetime.utcnow()
+        entrega.fecha_fin = datetime.now()
 
         # ======================================================
         # ACTUALIZAR DESPACHOS (AJUSTE NECESARIO)
@@ -1633,7 +1633,7 @@ SGI Madecentro
             if op:
 
                 op.completada = True
-                op.fecha_entrega = datetime.utcnow()
+                op.fecha_entrega = datetime.now()
 
                 ov = op.ov
 
@@ -1643,7 +1643,7 @@ SGI Madecentro
                 if total_ops > 0 and completadas == total_ops:
                     ov.estado = "LISTA_PARA_DESPACHO"
                     if not ov.fecha_lista_despacho:
-                        ov.fecha_lista_despacho = datetime.utcnow()
+                        ov.fecha_lista_despacho = datetime.now()
                 else:
                     ov.estado = "EN_PROCESO"
 
@@ -1945,7 +1945,7 @@ def api_pedidos_produccion(
         resultado = []
 
         # 🔵 TIEMPO ACTUAL (solo cálculo, no afecta nada)
-        ahora = datetime.utcnow()
+        ahora = datetime.now()
 
         for p in pedidos:
 
@@ -2325,7 +2325,7 @@ def api_despachos_resumen(request: Request):
                     hubo_cambios = True
 
                 if not ov.fecha_lista_despacho:
-                    ov.fecha_lista_despacho = datetime.utcnow()
+                    ov.fecha_lista_despacho = datetime.now()
                     hubo_cambios = True
 
                 ovs_listas += 1
@@ -2343,7 +2343,7 @@ def api_despachos_resumen(request: Request):
 
             if ov.estado == "LISTA_PARA_DESPACHO" and ov.fecha_lista_despacho:
 
-                base = ov.fecha_despacho or datetime.utcnow()
+                base = ov.fecha_despacho or datetime.now()
                 dias = (base - ov.fecha_lista_despacho).days
 
                 if dias <= 2:
@@ -2507,7 +2507,7 @@ def despachar_ov(
         # ======================================================
 
         ov.estado = "DESPACHADA"
-        ov.fecha_despacho = datetime.utcnow()
+        ov.fecha_despacho = datetime.now()
         ov.activa = False
 
         # Auditoría
@@ -2593,7 +2593,7 @@ def crear_sesion(
             cedula=cedula,
             nombre=nombre,
             zunchadora=zunchadora,
-            fecha_inicio=datetime.utcnow()
+            fecha_inicio=datetime.now()
         )
 
         db.add(nueva_sesion)
@@ -2743,7 +2743,7 @@ def reporte_pdf(request: Request, pedido_id: int):
         os.makedirs("reportes", exist_ok=True)
 
         numero_seguro = re.sub(r"[^A-Za-z0-9_-]", "_", pedido.numero_pedido)
-        timestamp = int(datetime.utcnow().timestamp())
+        timestamp = int(datetime.now().timestamp())
         ruta_final = f"reportes/REPORTE_COMPLETO_{numero_seguro}_{timestamp}.pdf"
 
         doc = SimpleDocTemplate(
@@ -3137,7 +3137,7 @@ async def escanear_pieza(request: Request, pedido_id: int, sesion_id: int, datos
         # MARCAR COMO ESCANEADA
         # --------------------------------------------------
         pieza.escaneada = True
-        pieza.fecha_escaneo = datetime.utcnow()
+        pieza.fecha_escaneo = datetime.now()
 
         db.flush()
 
@@ -3741,7 +3741,7 @@ def dashboard_direccion(
                     detail="Formato de fecha inválido. Use YYYY-MM-DD"
                 )
         else:
-            now = datetime.utcnow()
+            now = datetime.now()
             fecha_desde = datetime(now.year, now.month, 1)
             fecha_hasta = now
 
@@ -3807,7 +3807,7 @@ def export_dashboard_produccion(
                     detail="Formato de fecha inválido. Use YYYY-MM-DD"
                 )
         else:
-            now = datetime.utcnow()
+            now = datetime.now()
             fecha_desde = datetime(now.year, now.month, 1)
             fecha_hasta = now
 
@@ -3851,7 +3851,7 @@ def export_dashboard_produccion(
         # ======================================================
         os.makedirs("reportes", exist_ok=True)
 
-        timestamp = int(datetime.utcnow().timestamp())
+        timestamp = int(datetime.now().timestamp())
 
         filename = (
             f"REPORTE_PRODUCCION_"
@@ -3910,7 +3910,7 @@ def export_dashboard_entrega(
                     detail="Formato de fecha inválido. Use YYYY-MM-DD"
                 )
         else:
-            now = datetime.utcnow()
+            now = datetime.now()
             fecha_desde = datetime(now.year, now.month, 1)
             fecha_hasta = now
 
@@ -3954,7 +3954,7 @@ def export_dashboard_entrega(
         # ======================================================
         os.makedirs("reportes", exist_ok=True)
 
-        timestamp = int(datetime.utcnow().timestamp())
+        timestamp = int(datetime.now().timestamp())
 
         filename = (
             f"REPORTE_ENTREGA_"
@@ -4013,7 +4013,7 @@ def export_dashboard_despachos(
                     detail="Formato de fecha inválido. Use YYYY-MM-DD"
                 )
         else:
-            now = datetime.utcnow()
+            now = datetime.now()
             fecha_desde = datetime(now.year, now.month, 1)
             fecha_hasta = now
 
@@ -4055,7 +4055,7 @@ def export_dashboard_despachos(
         # ======================================================
         os.makedirs("reportes", exist_ok=True)
 
-        timestamp = int(datetime.utcnow().timestamp())
+        timestamp = int(datetime.now().timestamp())
 
         filename = (
             f"REPORTE_DESPACHOS_"
@@ -4114,7 +4114,7 @@ def export_dashboard_consolidado(
                     detail="Formato de fecha inválido. Use YYYY-MM-DD"
                 )
         else:
-            now = datetime.utcnow()
+            now = datetime.now()
             fecha_desde = datetime(now.year, now.month, 1)
             fecha_hasta = now
 
@@ -4154,7 +4154,7 @@ def export_dashboard_consolidado(
         # ======================================================
         os.makedirs("reportes", exist_ok=True)
 
-        timestamp = int(datetime.utcnow().timestamp())
+        timestamp = int(datetime.now().timestamp())
 
         filename = (
             f"REPORTE_CONSOLIDADO_"
@@ -4277,7 +4277,7 @@ def generar_pdf_completo(
                     detail="Formato de fecha inválido. Use YYYY-MM-DD"
                 )
         else:
-            now = datetime.utcnow()
+            now = datetime.now()
             ultimo_dia = monthrange(now.year, now.month)[1]
             desde_dt = datetime(now.year, now.month, 1)
             hasta_dt = datetime(now.year, now.month, ultimo_dia, 23, 59, 59)
@@ -4298,7 +4298,7 @@ def generar_pdf_completo(
         carpeta = "reportes"
         os.makedirs(carpeta, exist_ok=True)
 
-        timestamp = int(datetime.utcnow().timestamp())
+        timestamp = int(datetime.now().timestamp())
 
         filename = (
             f"INFORME_GENERAL_SGI_"
