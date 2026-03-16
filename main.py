@@ -2056,8 +2056,12 @@ def api_pedidos_entrega(
     db = get_db(planta)
 
     try:
+
+        resultado = []
+        pedidos_agregados = set()
+
         # ======================================================
-        # TRAER ENTREGAS ACTIVAS (NO ENVIADAS)
+        # 1️⃣ ENTREGAS ACTIVAS (LÓGICA ORIGINAL)
         # ======================================================
 
         entregas = (
@@ -2067,78 +2071,64 @@ def api_pedidos_entrega(
             .all()
         )
 
-        if not entregas:
-            return {
-                "data": [],
-                "page": page,
-                "size": size,
-                "total_registros": 0,
-                "total_paginas": 1
-            }
+        if entregas:
+
+            pedido_ids = list({e.pedido_id for e in entregas})
+
+            pedidos = db.query(Pedido).filter(
+                Pedido.id.in_(pedido_ids)
+            ).all()
+
+            pedidos_dict = {p.id: p for p in pedidos}
+
+            for entrega in entregas:
+                pedido = pedidos_dict.get(entrega.pedido_id)
+
+                if pedido and pedido.id not in pedidos_agregados:
+                    resultado.append({
+                        "id": pedido.id,
+                        "numero_pedido": pedido.numero_pedido,
+                        "cliente": pedido.cliente
+                    })
+
+                    pedidos_agregados.add(pedido.id)
 
         # ======================================================
-        # OBTENER PEDIDOS ÚNICOS
+        # 2️⃣ AGREGAR PEDIDOS COMPLETADOS QUE NO TENGAN ENTREGA
         # ======================================================
 
-        pedido_ids = list({e.pedido_id for e in entregas})
+        pedidos = db.query(Pedido).all()
 
-        pedidos = db.query(Pedido).filter(
-            Pedido.id.in_(pedido_ids)
-        ).all()
+        for pedido in pedidos:
 
-        pedidos_dict = {p.id: p for p in pedidos}
+            if pedido.id in pedidos_agregados:
+                continue
 
-        # 🔵 TIEMPO ACTUAL EN UTC
-        ahora = datetime.utcnow()
+            total = db.query(Pieza).filter(
+                Pieza.pedido_id == pedido.id
+            ).count()
 
-        # Evitar duplicados si existen múltiples entregas del mismo pedido
-        pedidos_agregados = set()
-        resultado = []
+            if total == 0:
+                continue
 
-        for entrega in entregas:
-            pedido = pedidos_dict.get(entrega.pedido_id)
+            escaneadas = db.query(Pieza).filter(
+                Pieza.pedido_id == pedido.id,
+                Pieza.escaneada.is_(True)
+            ).count()
 
-            if pedido and pedido.id not in pedidos_agregados:
-
-                # ==================================================
-                # CONTROL TIEMPO ENTRE PRODUCCIÓN Y CEDI
-                # ==================================================
-
-                dias_en_cedi = 0
-                semaforo_cedi = "VERDE"
-
-                if pedido.fecha_lista_despacho:
-
-                    dias_en_cedi = (
-                        ahora - pedido.fecha_lista_despacho
-                    ).days
-
-                    if dias_en_cedi <= 1:
-                        semaforo_cedi = "VERDE"
-                    elif dias_en_cedi == 2:
-                        semaforo_cedi = "NARANJA"
-                    else:
-                        semaforo_cedi = "ROJO"
+            # Pedido terminado de producción
+            if escaneadas == total:
 
                 resultado.append({
                     "id": pedido.id,
                     "numero_pedido": pedido.numero_pedido,
-                    "cliente": pedido.cliente,
-
-                    # 🔧 FECHA LISTA DESPACHO AJUSTADA A COLOMBIA
-                    "fecha_lista_despacho": (
-                        (pedido.fecha_lista_despacho - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
-                        if pedido.fecha_lista_despacho else None
-                    ),
-
-                    "dias_en_cedi": dias_en_cedi,
-                    "semaforo_cedi": semaforo_cedi
+                    "cliente": pedido.cliente
                 })
 
                 pedidos_agregados.add(pedido.id)
 
         # ======================================================
-        # PAGINACIÓN
+        # PAGINACIÓN (SIN CAMBIOS)
         # ======================================================
 
         total_registros = len(resultado)
