@@ -2135,24 +2135,13 @@ def api_pedidos_entrega(
 
         pedido_ids = list({e.pedido_id for e in entregas})
 
-        # pedidos que ya tienen entrega iniciada
-        pedidos_entrega = db.query(Pedido).filter(
-        Pedido.id.in_(pedido_ids)
+        pedidos = db.query(Pedido).filter(
+            Pedido.id.in_(pedido_ids)
         ).all()
 
-        # pedidos que ya terminaron producción
-        pedidos_completados = db.query(Pedido).filter(
-        Pedido.estado == "COMPLETADO"
-        ).all()
+        pedidos_dict = {p.id: p for p in pedidos}
 
-        # unir ambos sin duplicar
-        pedidos_dict = {p.id: p for p in pedidos_entrega}
-
-        for p in pedidos_completados:
-        if p.id not in pedidos_dict:
-        pedidos_dict[p.id] = p
-
-        ahora = datetime.now()
+        ahora = datetime.utcnow()
 
         # ======================================================
         # CONTADORES PANEL SEMÁFORO (AGREGADO)
@@ -2175,8 +2164,7 @@ def api_pedidos_entrega(
                 # FECHA ENTRADA A CEDI
                 # ==================================================
 
-                # AJUSTE: usar fecha_cargue del pedido
-                fecha_entrada = entrega.fecha_inicio or pedido.fecha_cargue
+                fecha_entrada = entrega.fecha_inicio
 
                 dias = 0
                 semaforo = "VERDE"
