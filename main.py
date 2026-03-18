@@ -130,17 +130,18 @@ if os.getenv("DATABASE_URL"):
 
     DATABASE_URL = os.getenv("DATABASE_URL").replace("postgres://", "postgresql://")
 
-    # 🔥 AJUSTE CLAVE (NO BORRA NADA, SOLO CORRIGE)
-    BASE_URL = DATABASE_URL
+    # 🔥 FIX REAL MULTI-PLANTA (NO DEPENDE DE /postgres)
+    # Extrae la base sin el nombre de DB
+    BASE_URL = DATABASE_URL.rsplit("/", 1)[0]
 
     DATABASES = {
-        "050": BASE_URL.replace("/postgres", "/sgi_050"),
-        "051": BASE_URL.replace("/postgres", "/sgi_051"),
-        "052": BASE_URL.replace("/postgres", "/sgi_052"),
-        "053": BASE_URL.replace("/postgres", "/sgi_053"),
-        "064": BASE_URL.replace("/postgres", "/sgi_064"),
-        "065": BASE_URL.replace("/postgres", "/sgi_065"),
-        "piloto": BASE_URL.replace("/postgres", "/sgi_piloto")
+        "050": f"{BASE_URL}/sgi_050",
+        "051": f"{BASE_URL}/sgi_051",
+        "052": f"{BASE_URL}/sgi_052",
+        "053": f"{BASE_URL}/sgi_053",
+        "064": f"{BASE_URL}/sgi_064",
+        "065": f"{BASE_URL}/sgi_065",
+        "piloto": f"{BASE_URL}/sgi_piloto"
     }
 
 else:
@@ -161,6 +162,60 @@ else:
         "piloto": f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/sgi_piloto",
     }
 
+# ==========================================================
+# CREAR ENGINES (1 POR PLANTA)
+# ==========================================================
+
+engines = {
+    codigo: create_engine(
+        url,
+        echo=False,
+        pool_pre_ping=True,
+        pool_recycle=1800
+    )
+    for codigo, url in DATABASES.items()
+}
+
+# ==========================================================
+# CREAR SESSIONMAKERS
+# ==========================================================
+
+SessionLocals = {
+    codigo: sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=engine
+    )
+    for codigo, engine in engines.items()
+}
+
+# ==========================================================
+# FUNCIÓN CENTRAL MULTI-PLANTA
+# ==========================================================
+
+from fastapi import HTTPException
+
+def get_db(planta_codigo: str):
+    """
+    Devuelve la sesión correcta según la planta activa.
+    """
+
+    if not planta_codigo:
+        raise HTTPException(
+            status_code=401,
+            detail="No hay planta seleccionada en sesión"
+        )
+
+    if planta_codigo not in SessionLocals:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Planta inválida: {planta_codigo}"
+        )
+
+    # 🔥 LOG CLAVE PARA DEBUG (NO ROMPE NADA)
+    logger.info(f"[DB] Planta activa: {planta_codigo} → {DATABASES[planta_codigo]}")
+
+    return SessionLocals[planta_codigo]()
 # ==========================================================
 # CREAR ENGINES (1 POR PLANTA)
 # ==========================================================
