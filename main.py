@@ -426,6 +426,7 @@ class Pedido(Base):
     numero_pedido = Column(String(50), unique=True, index=True, nullable=False)
     cliente = Column(String(150), nullable=False)
     fecha = Column(DateTime, default=datetime.now, nullable=False)
+    planta_codigo = Column(String(10), index=True)
 
     piezas = relationship(
         "Pieza",
@@ -1868,6 +1869,9 @@ async def subir_excel(
                 numero_pedido=pedido_numero,
                 cliente=cliente
             )
+
+            pedido_actual.planta_codigo = planta
+
             db.add(pedido_actual)
             db.commit()
             db.refresh(pedido_actual)
@@ -1995,7 +1999,9 @@ def api_pedidos_produccion(
         # TRAER PEDIDOS
         # ======================================================
 
-        pedidos = db.query(Pedido).order_by(
+        pedidos = db.query(Pedido).filter(
+            Pedido.planta_codigo == planta
+        ).order_by( 	
             Pedido.id.desc()
         ).all()
 
