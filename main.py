@@ -2124,7 +2124,11 @@ def api_pedidos_entrega(
 
         entregas = (
             db.query(EntregaCEDI)
-            .filter(EntregaCEDI.correo_enviado.is_(False))
+            .join(Pedido)
+            .filter(
+                Pedido.planta_codigo == planta,
+                EntregaCEDI.correo_enviado.is_(False)
+            )
             .order_by(EntregaCEDI.id.desc())
             .all()
         )
@@ -3646,7 +3650,7 @@ def calcular_porcentajes(verde, naranja, rojo):
 # FUNCION CENTRAL
 # ==========================================================
 
-def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta):
+def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta, planta):
 
     ahora = datetime.now()
 
@@ -3654,7 +3658,9 @@ def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta):
     # 🔵 PRODUCCIÓN
     # ======================================================
 
-    pedidos = db.query(Pedido).all()
+    pedidos = db.query(Pedido).filter(
+        Pedido.planta_codigo == planta
+    ).all()
 
     pendientes = 0
     en_proceso = 0
@@ -3733,7 +3739,9 @@ def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta):
     # 🟢 ENTREGA CEDI
     # ======================================================
 
-    entregas = db.query(EntregaCEDI).all()
+    entregas = db.query(EntregaCEDI).join(Pedido).filter(
+        Pedido.planta_codigo == planta
+    ).all()
 
     ent_pendientes = 0
     ent_curso = 0
