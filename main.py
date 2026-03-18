@@ -4728,7 +4728,7 @@ PIN_GERENCIAL = "1308"
 # PDF INFORME GENERAL SGI - 
 # ==========================================================
 
-@app.get("/dashboard/pdf-completo")
+@app.api_route("/dashboard/pdf-completo", methods=["GET", "HEAD"])
 def generar_pdf_completo(
     request: Request,
     pin: str = Query(...),
