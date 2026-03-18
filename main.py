@@ -5045,7 +5045,7 @@ def generar_pdf_completo(
         # ======================================================
         # FINAL
         # ======================================================
-        doc.build(elements, onFirstPage=decoracion, onLaterPages=decoracion)
+        doc.build(elements)
 
         return FileResponse(filepath, media_type='application/pdf', filename=filename)
 
