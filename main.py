@@ -76,7 +76,6 @@ if DATABASE_URL:
     # PRODUCCIÓN (RENDER)
     # ======================================================
 
-    # Render usa postgres:// y SQLAlchemy necesita postgresql://
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
 
     engine = create_engine(
@@ -130,8 +129,7 @@ if os.getenv("DATABASE_URL"):
 
     DATABASE_URL = os.getenv("DATABASE_URL").replace("postgres://", "postgresql://")
 
-    # 🔥 FIX REAL MULTI-PLANTA (NO DEPENDE DE /postgres)
-    # Extrae la base sin el nombre de DB
+    # 🔥 FIX REAL (NO depende de /postgres)
     BASE_URL = DATABASE_URL.rsplit("/", 1)[0]
 
     DATABASES = {
@@ -212,61 +210,11 @@ def get_db(planta_codigo: str):
             detail=f"Planta inválida: {planta_codigo}"
         )
 
-    # 🔥 LOG CLAVE PARA DEBUG (NO ROMPE NADA)
+    # 🔥 LOG CLAVE
     logger.info(f"[DB] Planta activa: {planta_codigo} → {DATABASES[planta_codigo]}")
 
     return SessionLocals[planta_codigo]()
-# ==========================================================
-# CREAR ENGINES (1 POR PLANTA)
-# ==========================================================
 
-engines = {
-    codigo: create_engine(
-        url,
-        echo=False,
-        pool_pre_ping=True,
-        pool_recycle=1800
-    )
-    for codigo, url in DATABASES.items()
-}
-
-# ==========================================================
-# CREAR SESSIONMAKERS
-# ==========================================================
-
-SessionLocals = {
-    codigo: sessionmaker(
-        autocommit=False,
-        autoflush=False,
-        bind=engine
-    )
-    for codigo, engine in engines.items()
-}
-
-# ==========================================================
-# FUNCIÓN CENTRAL MULTI-PLANTA
-# ==========================================================
-
-from fastapi import HTTPException
-
-def get_db(planta_codigo: str):
-    """
-    Devuelve la sesión correcta según la planta activa.
-    """
-
-    if not planta_codigo:
-        raise HTTPException(
-            status_code=401,
-            detail="No hay planta seleccionada en sesión"
-        )
-
-    if planta_codigo not in SessionLocals:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Planta inválida: {planta_codigo}"
-        )
-
-    return SessionLocals[planta_codigo]()
 # ==========================================================
 # CREAR TABLAS EN TODAS LAS PLANTAS (si no existen)
 # ==========================================================
@@ -329,8 +277,10 @@ def get_db(planta_codigo: str):
             detail=f"Planta inválida: {planta_codigo}"
         )
 
-    return SessionLocals[planta_codigo]()
+    # 🔥 LOG FINAL
+    logger.info(f"[DB FINAL] Planta activa: {planta_codigo} → {DATABASES[planta_codigo]}")
 
+    return SessionLocals[planta_codigo]()
 # ==========================================================
 # CONFIGURACIÓN CORREO SGI
 # ==========================================================
