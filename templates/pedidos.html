@@ -434,7 +434,11 @@ htmlEntrega += `
 p.semaforo === "VERDE" ? "verde" :
 p.semaforo === "NARANJA" ? "amarillo" : "rojo"
 }">
-${p.semaforo ?? "-"}
+${
+p.semaforo === "VERDE" ? "A TIEMPO" :
+p.semaforo === "NARANJA" ? "POR VENCER" :
+p.semaforo === "ROJO" ? "ATRASADO" : "-"
+}
 </span>
 </p>
 

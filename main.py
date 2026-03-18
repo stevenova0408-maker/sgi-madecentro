@@ -2120,8 +2120,6 @@ def api_pedidos_entrega(
                 "size": size,
                 "total_registros": 0,
                 "total_paginas": 1,
-
-                # PANEL SEMÁFORO (AGREGADO)
                 "panel_semaforo": {
                     "verde": 0,
                     "naranja": 0,
@@ -2141,17 +2139,13 @@ def api_pedidos_entrega(
 
         pedidos_dict = {p.id: p for p in pedidos}
 
+        # 🔥 se mantiene UTC para cálculo correcto
         ahora = datetime.utcnow()
-
-        # ======================================================
-        # CONTADORES PANEL SEMÁFORO (AGREGADO)
-        # ======================================================
 
         contador_verde = 0
         contador_naranja = 0
         contador_rojo = 0
 
-        # Evitar duplicados si existen múltiples entregas del mismo pedido
         pedidos_agregados = set()
         resultado = []
 
@@ -2164,7 +2158,6 @@ def api_pedidos_entrega(
                 # FECHA ENTRADA A CEDI
                 # ==================================================
 
-                # 🔥 AJUSTE EXACTO (único cambio)
                 fecha_entrada = pedido.fecha
 
                 dias = 0
@@ -2172,18 +2165,24 @@ def api_pedidos_entrega(
 
                 if fecha_entrada:
 
-                    dias = (ahora - fecha_entrada).days
+                    # 🔥 CALCULO REAL (NO TRUNCADO)
+                    horas = (ahora - fecha_entrada).total_seconds() / 3600
+                    dias = horas / 24
 
-                    if dias <= 1:
-                        semaforo = "VERDE"
+                    # ==================================================
+                    # 🔥 SEMÁFORO OPERATIVO (AJUSTADO A TU REGLA)
+                    # ==================================================
+
+                    if horas < 24:
+                        semaforo = "VERDE"  # A TIEMPO
                         contador_verde += 1
 
-                    elif dias == 2:
-                        semaforo = "NARANJA"
+                    elif horas < 48:
+                        semaforo = "NARANJA"  # POR VENCER ENTREGA
                         contador_naranja += 1
 
                     else:
-                        semaforo = "ROJO"
+                        semaforo = "ROJO"  # ENTREGA ATRASADA
                         contador_rojo += 1
 
                 resultado.append({
@@ -2191,12 +2190,13 @@ def api_pedidos_entrega(
                     "numero_pedido": pedido.numero_pedido,
                     "cliente": pedido.cliente,
 
-                    # NUEVOS CAMPOS (no rompen frontend)
+                    # 🔥 MOSTRAR EN HORA COLOMBIA
                     "fecha_entrada_cedi": (
-                        fecha_entrada.strftime("%Y-%m-%d %H:%M")
+                        (fecha_entrada - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
                         if fecha_entrada else None
                     ),
-                    "dias_disponible": dias,
+
+                    "dias_disponible": round(dias, 2),
                     "semaforo": semaforo
                 })
 
@@ -2218,11 +2218,6 @@ def api_pedidos_entrega(
             "size": size,
             "total_registros": total_registros,
             "total_paginas": total_paginas,
-
-            # ==================================================
-            # PANEL SEMÁFORO (AGREGADO)
-            # ==================================================
-
             "panel_semaforo": {
                 "verde": contador_verde,
                 "naranja": contador_naranja,

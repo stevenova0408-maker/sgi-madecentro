@@ -203,9 +203,13 @@ button:disabled{
 
 <div class="card">
 <h3>📷 Subir Remisión</h3>
-<input type="file" id="remision_file" accept="image/*">
+
+<input type="file" id="remision_file" accept="image/*,application/pdf" capture="environment">
+
 <br>
+
 <button class="blue" onclick="subirRemision()">Subir Remisión</button>
+
 <div id="preview"></div>
 </div>
 
@@ -226,6 +230,31 @@ const PEDIDO_ID = {{ pedido_id }};
 let fechaInicio = null;
 let estadoActual = "PENDIENTE";
 let totalPaquetes = 0;
+
+/* ================= PREVIEW REMISION ================= */
+document.getElementById("remision_file").addEventListener("change", function(e){
+
+    const file = e.target.files[0];
+    const preview = document.getElementById("preview");
+
+    preview.innerHTML = "";
+
+    if(!file) return;
+
+    // Imagen
+    if(file.type.startsWith("image/")){
+        const img = document.createElement("img");
+        img.className = "preview-img";
+        img.src = URL.createObjectURL(file);
+        preview.appendChild(img);
+    }
+
+    // PDF
+    else if(file.type === "application/pdf"){
+        preview.innerHTML = `<p>📄 ${file.name}</p>`;
+    }
+});
+
 
 /* ================= CARGAR DATOS ================= */
 async function cargarDatos(){
@@ -406,11 +435,20 @@ async function enviarCorreo(){
     });
 
     let data = await res.json();
-    document.getElementById("mensaje").innerText = data.mensaje || data.detail;
 
+    // 🔥 MENSAJE MEJORADO
     if(res.ok){
-        // ⬇⬇⬇ AQUI ESTA LA CLAVE ⬇⬇⬇
-        window.location.href = "/pedidos";
+        document.getElementById("mensaje").innerText =
+            "✅ Correo enviado y pedido cargado a despachos correctamente";
+
+        // 🔥 ESPERA PARA QUE EL USUARIO LO VEA
+        setTimeout(() => {
+            window.location.href = "/pedidos";
+        }, 1500);
+
+    } else {
+        document.getElementById("mensaje").innerText =
+            "❌ " + (data.detail || "Error al enviar correo");
     }
 }
 
