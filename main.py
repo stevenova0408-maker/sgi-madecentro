@@ -130,14 +130,17 @@ if os.getenv("DATABASE_URL"):
 
     DATABASE_URL = os.getenv("DATABASE_URL").replace("postgres://", "postgresql://")
 
+    # 🔥 AJUSTE CLAVE (NO BORRA NADA, SOLO CORRIGE)
+    BASE_URL = DATABASE_URL
+
     DATABASES = {
-        "050": DATABASE_URL,
-        "051": DATABASE_URL,
-        "052": DATABASE_URL,
-        "053": DATABASE_URL,
-        "064": DATABASE_URL,
-        "065": DATABASE_URL,
-        "piloto": DATABASE_URL
+        "050": BASE_URL.replace("/postgres", "/sgi_050"),
+        "051": BASE_URL.replace("/postgres", "/sgi_051"),
+        "052": BASE_URL.replace("/postgres", "/sgi_052"),
+        "053": BASE_URL.replace("/postgres", "/sgi_053"),
+        "064": BASE_URL.replace("/postgres", "/sgi_064"),
+        "065": BASE_URL.replace("/postgres", "/sgi_065"),
+        "piloto": BASE_URL.replace("/postgres", "/sgi_piloto")
     }
 
 else:
@@ -358,7 +361,9 @@ def home(request: Request):
 
     planta = request.session.get("planta_codigo")
 
-    if not planta:
+    # 🔥 VALIDACIÓN EXTRA (RECOMENDADO)
+    if not planta or planta not in DATABASES:
+        request.session.clear()
         return RedirectResponse(url="/login", status_code=302)
 
     return RedirectResponse(url="/pedidos", status_code=302)
