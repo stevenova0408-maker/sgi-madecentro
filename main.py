@@ -4961,9 +4961,9 @@ def generar_pdf_completo(
         elements.append(tabla_des)
 
         # ======================================================
-        # FINAL
+        # FINAL (CORREGIDO)
         # ======================================================
-        doc.build(elements, onFirstPage=decoracion, onLaterPages=decoracion)
+        doc.build(elements)
 
         return FileResponse(filepath, media_type='application/pdf', filename=filename)
 
