@@ -396,9 +396,11 @@ let rojo = 0;
 
 data.forEach(p => {
 
-if (p.semaforo === "VERDE") verde++;
-if (p.semaforo === "NARANJA") naranja++;
-if (p.semaforo === "ROJO") rojo++;
+let estado = (p.semaforo || "").trim().toUpperCase();
+
+if (estado === "VERDE") verde++;
+if (estado === "NARANJA") naranja++;
+if (estado === "ROJO") rojo++;
 
 });
 
