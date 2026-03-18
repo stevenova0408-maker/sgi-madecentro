@@ -133,13 +133,13 @@ if os.getenv("DATABASE_URL"):
     BASE_URL = DATABASE_URL.rsplit("/", 1)[0]
 
     DATABASES = {
-        "050": f"{BASE_URL}/sgi_050",
-        "051": f"{BASE_URL}/sgi_051",
-        "052": f"{BASE_URL}/sgi_052",
-        "053": f"{BASE_URL}/sgi_053",
-        "064": f"{BASE_URL}/sgi_064",
-        "065": f"{BASE_URL}/sgi_065",
-        "piloto": f"{BASE_URL}/sgi_piloto"
+        "050": DATABASE_URL,
+        "051": DATABASE_URL,
+        "052": DATABASE_URL,
+        "053": DATABASE_URL,
+        "064": DATABASE_URL,
+        "065": DATABASE_URL,
+        "piloto": DATABASE_URL
     }
 
 else:
