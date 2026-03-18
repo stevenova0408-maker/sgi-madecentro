@@ -4725,10 +4725,10 @@ def calcular_periodo_anterior(desde_dt, hasta_dt, modo="mensual"):
 
 PIN_GERENCIAL = "1308"
 # ==========================================================
-# PDF INFORME GENERAL SGI - 
+# PDF INFORME GENERAL SGI - VERSION CORPORATIVA FINAL (INTELIGENTE)
 # ==========================================================
 
-@app.api_route("/dashboard/pdf-completo", methods=["GET", "HEAD"])
+@app.get("/dashboard/pdf-completo")
 def generar_pdf_completo(
     request: Request,
     pin: str = Query(...),
@@ -4757,12 +4757,12 @@ def generar_pdf_completo(
                 hasta_dt = datetime.strptime(hasta, "%Y-%m-%d")
                 hasta_dt = hasta_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
             except ValueError:
-                raise HTTPException(400, "Formato de fecha inválido")
+                raise HTTPException(status_code=400, detail="Formato de fecha inválido")
         else:
             now = datetime.now()
             ultimo_dia = monthrange(now.year, now.month)[1]
             desde_dt = datetime(now.year, now.month, 1)
-            hasta_dt = datetime(now.year, now.month, ultimo_dia, 23, 59, 59)
+            hasta_dt = datetime(now.year, now.month, ultimo_dia, 23, 59, 59, 999999)
 
         desde_ant, hasta_ant = calcular_periodo_anterior(desde_dt, hasta_dt)
 
@@ -4773,54 +4773,85 @@ def generar_pdf_completo(
         data_anterior = obtener_metricas_dashboard(db, desde_ant, hasta_ant)
 
         # ======================================================
-        # 🔒 PROTECCIÓN
-        # ======================================================
-        def asegurar_indicadores(data):
-
-            if "indicadores" not in data:
-                data["indicadores"] = {}
-
-            for modulo in ["produccion", "cedi", "despachos"]:
-
-                if modulo not in data["indicadores"]:
-                    data["indicadores"][modulo] = {
-                        "verde": 0,
-                        "naranja": 0,
-                        "rojo": 0,
-                        "porcentajes": {"verde": 0, "naranja": 0, "rojo": 0}
-                    }
-
-                else:
-                    ind = data["indicadores"][modulo]
-
-                    if "porcentajes" not in ind:
-                        ind["porcentajes"] = {"verde": 0, "naranja": 0, "rojo": 0}
-
-            return data
-
-        data_actual = asegurar_indicadores(data_actual)
-        data_anterior = asegurar_indicadores(data_anterior)
-
-        # ======================================================
-        # 🧠 ANÁLISIS
+        # 🧠 FUNCIÓN INTELIGENTE
         # ======================================================
         def analizar_etapa(actual, anterior):
             verde = actual["porcentajes"]["verde"]
+            naranja = actual["porcentajes"]["naranja"]
+            rojo = actual["porcentajes"]["rojo"]
+
             verde_ant = anterior["porcentajes"]["verde"]
             variacion = round(verde - verde_ant, 2)
 
+            if verde >= 80:
+                nivel = "óptimo"
+            elif verde >= 60:
+                nivel = "aceptable"
+            else:
+                nivel = "crítico"
+
+            if rojo > 20:
+                diagnostico = "alto nivel de atraso"
+            elif naranja > 30:
+                diagnostico = "riesgo operativo creciente"
+            else:
+                diagnostico = "operación controlada"
+
+            if variacion > 0:
+                tendencia = "mejora"
+            elif variacion < 0:
+                tendencia = "empeora"
+            else:
+                tendencia = "estable"
+
             return {
-                "nivel": "óptimo" if verde >= 80 else "aceptable" if verde >= 60 else "crítico",
-                "tendencia": "mejora" if variacion > 0 else "empeora" if variacion < 0 else "estable",
-                "diagnostico": "alto nivel de atraso" if actual["porcentajes"]["rojo"] > 20 else "operación controlada"
+                "nivel": nivel,
+                "variacion": variacion,
+                "diagnostico": diagnostico,
+                "tendencia": tendencia
             }
+
+        # ======================================================
+        # 🧠 RESUMEN INTELIGENTE
+        # ======================================================
+        def generar_resumen_etapa(nombre, data, regla_tiempo):
+            verde = data["verde"]
+            naranja = data["naranja"]
+            rojo = data["rojo"]
+
+            pct_v = data["porcentajes"]["verde"]
+            pct_n = data["porcentajes"]["naranja"]
+            pct_r = data["porcentajes"]["rojo"]
+
+            total = verde + naranja + rojo
+
+            if total == 0:
+                return f"No se registran datos en {nombre} durante el periodo."
+
+            texto = (
+                f"Durante el periodo se gestionaron {total} registros en {nombre}, "
+                f"donde el {pct_v}% se encuentran a tiempo (verde), "
+                f"el {pct_n}% en riesgo (naranja) y el {pct_r}% en estado crítico (rojo), "
+                f"según el indicador operativo de {regla_tiempo}. "
+            )
+
+            if pct_r > 20:
+                texto += "Se evidencia un nivel crítico que requiere intervención inmediata y control operativo."
+            elif pct_n > 30:
+                texto += "Se recomienda realizar seguimiento cercano para evitar desviaciones en el proceso."
+            elif pct_v >= 80:
+                texto += "La operación se mantiene estable y dentro de los niveles esperados, se deben conservar las buenas prácticas."
+            else:
+                texto += "El comportamiento es aceptable, con oportunidades de mejora en eficiencia."
+
+            return texto
 
         analisis_prod = analizar_etapa(data_actual["indicadores"]["produccion"], data_anterior["indicadores"]["produccion"])
         analisis_cedi = analizar_etapa(data_actual["indicadores"]["cedi"], data_anterior["indicadores"]["cedi"])
         analisis_desp = analizar_etapa(data_actual["indicadores"]["despachos"], data_anterior["indicadores"]["despachos"])
 
         # ======================================================
-        # CONFIGURACIÓN PDF (MEJORADO)
+        # ARCHIVO
         # ======================================================
         carpeta = "reportes"
         os.makedirs(carpeta, exist_ok=True)
@@ -4828,15 +4859,7 @@ def generar_pdf_completo(
         filename = f"INFORME_GENERAL_SGI_{int(datetime.now().timestamp())}.pdf"
         filepath = os.path.join(carpeta, filename)
 
-        doc = SimpleDocTemplate(
-            filepath,
-            pagesize=pagesizes.A4,
-            rightMargin=40,
-            leftMargin=40,
-            topMargin=60,
-            bottomMargin=40
-        )
-
+        doc = SimpleDocTemplate(filepath, pagesize=pagesizes.A4)
         elements = []
 
         # ======================================================
@@ -4850,66 +4873,107 @@ def generar_pdf_completo(
         # PORTADA
         # ======================================================
         elements.append(Paragraph("INFORME GENERAL OPERATIVO SGI", style_title))
-        elements.append(Spacer(1, 15))
+        elements.append(Spacer(1, 0.3 * inch))
 
         elements.append(Paragraph(
-            f"Periodo: {desde_dt.strftime('%Y-%m-%d')} al {hasta_dt.strftime('%Y-%m-%d')}",
+            f"Periodo Analizado: {desde_dt.strftime('%Y-%m-%d')} al {hasta_dt.strftime('%Y-%m-%d')}",
             style_normal
         ))
 
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 0.2 * inch))
 
         elements.append(Paragraph(
             f"ÍNDICE GENERAL SGI: {data_actual['indice_sgi']}%",
             style_index
         ))
 
-        elements.append(Spacer(1, 25))
+        elements.append(Spacer(1, 0.5 * inch))
 
         # ======================================================
         # CONCLUSIÓN
         # ======================================================
-        variacion = round(data_actual["indice_sgi"] - data_anterior["indice_sgi"], 2)
+        indice_actual = data_actual["indice_sgi"]
+        indice_anterior = data_anterior["indice_sgi"]
+        variacion = round(indice_actual - indice_anterior, 2)
 
-        conclusion = (
-            f"El desempeño global {'mejora' if variacion>0 else 'disminuye' if variacion<0 else 'se mantiene'} "
-            f"{abs(variacion)} puntos frente al periodo anterior. "
-            f"Producción {analisis_prod['nivel']}, CEDI {analisis_cedi['nivel']}, "
-            f"Despachos {analisis_desp['nivel']}."
+        if variacion > 0:
+            conclusion = f"El desempeño global mejora {variacion} puntos frente al periodo anterior. "
+        elif variacion < 0:
+            conclusion = f"El desempeño global disminuye {abs(variacion)} puntos respecto al periodo anterior. "
+        else:
+            conclusion = "El desempeño global se mantiene estable frente al periodo anterior. "
+
+        conclusion += (
+            f"Producción en nivel {analisis_prod['nivel']} ({analisis_prod['tendencia']}). "
+            f"CEDI en nivel {analisis_cedi['nivel']} ({analisis_cedi['tendencia']}). "
+            f"Despachos en nivel {analisis_desp['nivel']} ({analisis_desp['tendencia']})."
         )
 
         elements.append(Paragraph("CONCLUSIÓN ESTRATÉGICA", style_title))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 0.2 * inch))
         elements.append(Paragraph(conclusion, style_normal))
-        elements.append(Spacer(1, 25))
+        elements.append(Spacer(1, 0.4 * inch))
 
         # ======================================================
         # ALERTAS
         # ======================================================
         elements.append(Paragraph("ALERTAS OPERATIVAS", style_title))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 0.2 * inch))
 
-        for txt in [
-            analisis_prod["diagnostico"],
-            analisis_cedi["diagnostico"],
-            analisis_desp["diagnostico"]
-        ]:
-            if txt != "operación controlada":
-                elements.append(Paragraph(f"- {txt}", style_normal))
+        alertas = []
 
-        elements.append(Spacer(1, 25))
+        if analisis_prod["diagnostico"] != "operación controlada":
+            alertas.append(f"Producción: {analisis_prod['diagnostico']}")
+
+        if analisis_cedi["diagnostico"] != "operación controlada":
+            alertas.append(f"CEDI: {analisis_cedi['diagnostico']}")
+
+        if analisis_desp["diagnostico"] != "operación controlada":
+            alertas.append(f"Despachos: {analisis_desp['diagnostico']}")
+
+        if not alertas:
+            alertas.append("Operación sin alertas críticas")
+
+        for a in alertas:
+            elements.append(Paragraph(f"- {a}", style_normal))
+
+        elements.append(Spacer(1, 0.5 * inch))
 
         # ======================================================
-        # TABLAS CON ESTILO CORPORATIVO
+        # RESUMEN OPERATIVO
+        # ======================================================
+        elements.append(Paragraph("RESUMEN OPERATIVO POR ETAPA", style_title))
+        elements.append(Spacer(1, 0.2 * inch))
+
+        elements.append(Paragraph(f"<b>Producción:</b> {generar_resumen_etapa('Producción', data_actual['indicadores']['produccion'], '24 horas')}", style_normal))
+        elements.append(Spacer(1, 0.2 * inch))
+
+        elements.append(Paragraph(f"<b>Entrega CEDI:</b> {generar_resumen_etapa('CEDI', data_actual['indicadores']['cedi'], '3 días')}", style_normal))
+        elements.append(Spacer(1, 0.2 * inch))
+
+        elements.append(Paragraph(f"<b>Despachos:</b> {generar_resumen_etapa('Despachos', data_actual['indicadores']['despachos'], '5 días')}", style_normal))
+        elements.append(Spacer(1, 0.4 * inch))
+
+        # ======================================================
+        # TABLAS (TU ESTILO ORIGINAL)
         # ======================================================
 
         # PRODUCCIÓN
+        prod_act = data_actual["indicadores"]["produccion"]
+        prod_ant = data_anterior["indicadores"]["produccion"]
+
         tabla_prod = Table([
-            ["Métrica","Actual","Anterior"],
+            ["Métrica", "Actual", "Anterior"],
             ["Pendientes", data_actual["produccion"]["pendientes"], data_anterior["produccion"]["pendientes"]],
             ["En Proceso", data_actual["produccion"]["en_proceso"], data_anterior["produccion"]["en_proceso"]],
             ["Completadas", data_actual["produccion"]["completadas"], data_anterior["produccion"]["completadas"]],
             ["% Cumplimiento", data_actual["produccion"]["cumplimiento"], data_anterior["produccion"]["cumplimiento"]],
+            ["Verde", f"{prod_act['verde']} ({prod_act['porcentajes']['verde']}%)",
+                      f"{prod_ant['verde']} ({prod_ant['porcentajes']['verde']}%)"],
+            ["Naranja", f"{prod_act['naranja']} ({prod_act['porcentajes']['naranja']}%)",
+                        f"{prod_ant['naranja']} ({prod_ant['porcentajes']['naranja']}%)"],
+            ["Rojo", f"{prod_act['rojo']} ({prod_act['porcentajes']['rojo']}%)",
+                     f"{prod_ant['rojo']} ({prod_ant['porcentajes']['rojo']}%)"],
         ])
 
         tabla_prod.setStyle(TableStyle([
@@ -4919,16 +4983,25 @@ def generar_pdf_completo(
         ]))
 
         elements.append(Paragraph("PRODUCCIÓN", style_title))
-        elements.append(Spacer(1, 8))
+        elements.append(Spacer(1, 0.2 * inch))
         elements.append(tabla_prod)
-        elements.append(Spacer(1, 20))
+        elements.append(Spacer(1, 0.4 * inch))
 
-        # ENTREGA
+        # ENTREGA CEDI
+        cedi_act = data_actual["indicadores"]["cedi"]
+        cedi_ant = data_anterior["indicadores"]["cedi"]
+
         tabla_ent = Table([
-            ["Métrica","Actual","Anterior"],
+            ["Métrica", "Actual", "Anterior"],
             ["Completadas", data_actual["entrega"]["completadas"], data_anterior["entrega"]["completadas"]],
             ["Promedio Min", data_actual["entrega"]["promedio_minutos"], data_anterior["entrega"]["promedio_minutos"]],
             ["% Eficiencia", data_actual["entrega"]["eficiencia"], data_anterior["entrega"]["eficiencia"]],
+            ["Verde", f"{cedi_act['verde']} ({cedi_act['porcentajes']['verde']}%)",
+                      f"{cedi_ant['verde']} ({cedi_ant['porcentajes']['verde']}%)"],
+            ["Naranja", f"{cedi_act['naranja']} ({cedi_act['porcentajes']['naranja']}%)",
+                        f"{cedi_ant['naranja']} ({cedi_ant['porcentajes']['naranja']}%)"],
+            ["Rojo", f"{cedi_act['rojo']} ({cedi_act['porcentajes']['rojo']}%)",
+                     f"{cedi_ant['rojo']} ({cedi_ant['porcentajes']['rojo']}%)"],
         ])
 
         tabla_ent.setStyle(TableStyle([
@@ -4938,16 +5011,25 @@ def generar_pdf_completo(
         ]))
 
         elements.append(Paragraph("ENTREGA CEDI", style_title))
-        elements.append(Spacer(1, 8))
+        elements.append(Spacer(1, 0.2 * inch))
         elements.append(tabla_ent)
-        elements.append(Spacer(1, 20))
+        elements.append(Spacer(1, 0.4 * inch))
 
         # DESPACHOS
+        desp_act = data_actual["indicadores"]["despachos"]
+        desp_ant = data_anterior["indicadores"]["despachos"]
+
         tabla_des = Table([
-            ["Métrica","Actual","Anterior"],
+            ["Métrica", "Actual", "Anterior"],
             ["Despachadas", data_actual["despachos"]["despachadas"], data_anterior["despachos"]["despachadas"]],
             ["Promedio Días", data_actual["despachos"]["promedio_dias"], data_anterior["despachos"]["promedio_dias"]],
             ["% Eficiencia", data_actual["despachos"]["eficiencia"], data_anterior["despachos"]["eficiencia"]],
+            ["Verde", f"{desp_act['verde']} ({desp_act['porcentajes']['verde']}%)",
+                      f"{desp_ant['verde']} ({desp_ant['porcentajes']['verde']}%)"],
+            ["Naranja", f"{desp_act['naranja']} ({desp_act['porcentajes']['naranja']}%)",
+                        f"{desp_ant['naranja']} ({desp_ant['porcentajes']['naranja']}%)"],
+            ["Rojo", f"{desp_act['rojo']} ({desp_act['porcentajes']['rojo']}%)",
+                     f"{desp_ant['rojo']} ({desp_ant['porcentajes']['rojo']}%)"],
         ])
 
         tabla_des.setStyle(TableStyle([
@@ -4957,13 +5039,13 @@ def generar_pdf_completo(
         ]))
 
         elements.append(Paragraph("DESPACHOS", style_title))
-        elements.append(Spacer(1, 8))
+        elements.append(Spacer(1, 0.2 * inch))
         elements.append(tabla_des)
 
         # ======================================================
-        # FINAL (CORREGIDO)
+        # FINAL
         # ======================================================
-        doc.build(elements)
+        doc.build(elements, onFirstPage=decoracion, onLaterPages=decoracion)
 
         return FileResponse(filepath, media_type='application/pdf', filename=filename)
 
