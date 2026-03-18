@@ -212,6 +212,7 @@ input[type="date"]{
     </div>
 </div>
 
+<!-- SOLO SE MODIFICA JS, HTML ORIGINAL INTACTO -->
 <script>
 let dataGlobal;
 let charts = {};
@@ -267,7 +268,12 @@ function generarPDFGerencial(){
 }
 
 function actualizarVista(){
+
     document.getElementById("indice").innerText = dataGlobal.indice_sgi + "%";
+
+    // =========================
+    // KPIs EXISTENTES (NO TOCAR)
+    // =========================
     document.getElementById("p_pend").innerText = dataGlobal.produccion.pendientes;
     document.getElementById("p_proc").innerText = dataGlobal.produccion.en_proceso;
     document.getElementById("p_comp").innerText = dataGlobal.produccion.completadas;
@@ -283,13 +289,29 @@ function actualizarVista(){
     document.getElementById("d_desp").innerText = dataGlobal.despachos.despachadas;
     document.getElementById("d_prom").innerText = dataGlobal.despachos.promedio_dias;
 
+    // =========================
+    // 🔥 NUEVO: SEMÁFOROS (SI EXISTEN)
+    // =========================
+    if(dataGlobal.indicadores){
+
+        console.log("Indicadores cargados:", dataGlobal.indicadores);
+
+        // Puedes luego mostrarlos en UI si quieres
+        // (no los inyecto en HTML para no romper diseño)
+    }
+
     generarGrafico("grafProd", dataGlobal.produccion.tendencia, "#ff7a00");
     generarGrafico("grafEnt", dataGlobal.entrega.tendencia, "#1f2937");
     generarGrafico("grafDes", dataGlobal.despachos.tendencia, "#fbbf24");
+
     generarGraficoConsolidado(dataGlobal.consolidado_diario);
 }
 
+// =========================
+// 🔥 GRÁFICOS CON LÍNEAS META
+// =========================
 function generarGrafico(canvasId, dataObj, color){
+
     const labels = Object.keys(dataObj || {});
     const values = Object.values(dataObj || {});
 
@@ -299,20 +321,44 @@ function generarGrafico(canvasId, dataObj, color){
         type:'line',
         data:{
             labels: labels.length ? labels : ["Sin datos"],
-            datasets:[{
-                label:"Registros",
-                data: values.length ? values : [0],
-                borderColor:color,
-                backgroundColor:color,
-                tension:0.4,
-                pointRadius:5
-            }]
+            datasets:[
+                {
+                    label:"Registros",
+                    data: values.length ? values : [0],
+                    borderColor:color,
+                    backgroundColor:color,
+                    tension:0.4,
+                    pointRadius:5
+                },
+                {
+                    label:"Meta 60%",
+                    data: labels.map(()=>60),
+                    borderColor:"#fbbf24",
+                    borderDash:[5,5],
+                    pointRadius:0
+                },
+                {
+                    label:"Meta 80%",
+                    data: labels.map(()=>80),
+                    borderColor:"#3b82f6",
+                    borderDash:[5,5],
+                    pointRadius:0
+                },
+                {
+                    label:"Meta 100%",
+                    data: labels.map(()=>100),
+                    borderColor:"#10b981",
+                    borderDash:[5,5],
+                    pointRadius:0
+                }
+            ]
         },
         options:{ scales:{ y:{ beginAtZero:true }}}
     });
 }
 
 function generarGraficoConsolidado(data){
+
     const fechas = Object.keys(data || {});
     const prod = fechas.map(f => data[f]?.produccion || 0);
     const ent = fechas.map(f => data[f]?.entregas || 0);

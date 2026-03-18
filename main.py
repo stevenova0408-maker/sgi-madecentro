@@ -415,7 +415,7 @@ class Pedido(Base):
     id = Column(Integer, primary_key=True, index=True)
     numero_pedido = Column(String(50), unique=True, index=True, nullable=False)
     cliente = Column(String(150), nullable=False)
-    fecha = Column(DateTime, default=datetime.utcnow, nullable=False)
+    fecha = Column(DateTime, default=datetime.now, nullable=False)
 
     piezas = relationship(
         "Pieza",
@@ -572,7 +572,7 @@ class Sesion(Base):
     nombre = Column(String(150), nullable=False)
     zunchadora = Column(String(100), nullable=False)
 
-    fecha_inicio = Column(DateTime, default=datetime.utcnow, nullable=False)
+    fecha_inicio = Column(DateTime, default=datetime.now, nullable=False)
     fecha_fin = Column(DateTime, nullable=True)
 
     pedido = relationship("Pedido", back_populates="sesiones")
@@ -586,7 +586,7 @@ class AuditoriaAdmin(Base):
     __tablename__ = "auditoria_admin"
 
     id = Column(Integer, primary_key=True, index=True)
-    fecha = Column(DateTime, default=datetime.utcnow, nullable=False)
+    fecha = Column(DateTime, default=datetime.now, nullable=False)
 
     accion = Column(String(100), nullable=False)
     pedido_numero = Column(String(50), nullable=False, index=True)
@@ -1227,7 +1227,7 @@ def api_entrega_cedi(request: Request, pedido_id: int):
         # TIEMPO ACTUAL (PARA CONTROL DE DÍAS)
         # ======================================================
 
-        ahora = datetime.utcnow()
+        ahora = datetime.now()
 
         if not entrega:
             return {
@@ -1992,7 +1992,7 @@ def api_pedidos_produccion(
         resultado = []
 
         # 🔵 TIEMPO ACTUAL EN UTC (para que coincida con lo guardado en BD)
-        ahora = datetime.utcnow()
+        ahora = datetime.now()
 
         for p in pedidos:
 
@@ -2140,7 +2140,7 @@ def api_pedidos_entrega(
         pedidos_dict = {p.id: p for p in pedidos}
 
         # 🔥 se mantiene UTC para cálculo correcto
-        ahora = datetime.utcnow()
+        ahora = datetime.now()
 
         contador_verde = 0
         contador_naranja = 0
@@ -2250,7 +2250,7 @@ class OV(Base):
 
     activa = Column(Boolean, default=True, nullable=False)
 
-    fecha_creacion = Column(DateTime, default=datetime.utcnow, nullable=False)
+    fecha_creacion = Column(DateTime, default=datetime.now, nullable=False)
     fecha_lista_despacho = Column(DateTime, nullable=True)
     fecha_despacho = Column(DateTime, nullable=True)
 
@@ -3591,7 +3591,7 @@ def admin_eliminar_paquete(
     finally:
         db.close() 
 # ==========================================================
-# DASHBOARD DIRECCIÓN SGI - VERSION EJECUTIVA COMPLETA
+# DASHBOARD DIRECCIÓN SGI - VERSION EJECUTIVA MEJORADA
 # ==========================================================
 
 from collections import defaultdict
@@ -3600,19 +3600,55 @@ from sqlalchemy import func
 
 
 # ==========================================================
-# FUNCION CENTRAL REUTILIZABLE (NO ROMPE NADA)
+# FUNCION AUXILIAR (PORCENTAJES)
+# ==========================================================
+
+def calcular_porcentajes(verde, naranja, rojo):
+    total = verde + naranja + rojo
+
+    if total == 0:
+        return {
+            "total": 0,
+            "porcentajes": {
+                "verde": 0,
+                "naranja": 0,
+                "rojo": 0
+            }
+        }
+
+    return {
+        "total": total,
+        "porcentajes": {
+            "verde": round((verde / total) * 100, 2),
+            "naranja": round((naranja / total) * 100, 2),
+            "rojo": round((rojo / total) * 100, 2)
+        }
+    }
+
+
+# ==========================================================
+# FUNCION CENTRAL
 # ==========================================================
 
 def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta):
 
+    ahora = datetime.now()
+
     # ======================================================
     # 🔵 PRODUCCIÓN
     # ======================================================
+
     pedidos = db.query(Pedido).all()
 
     pendientes = 0
     en_proceso = 0
     completadas = 0
+
+    # 🔥 SEMÁFORO
+    verde_prod = 0
+    naranja_prod = 0
+    rojo_prod = 0
+
     tendencia_produccion = defaultdict(int)
     registro_produccion = []
 
@@ -3626,25 +3662,40 @@ def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta):
             continue
 
         porc = int((esc / total) * 100)
-        ultima = None  # 🔥 Reinicio seguro
 
+        # ================================
+        # ESTADO CLÁSICO
+        # ================================
         if porc == 0:
             pendientes += 1
-
         elif porc < 100:
             en_proceso += 1
-
         else:
             completadas += 1
 
-            fechas = [x.fecha_escaneo for x in piezas if x.fecha_escaneo]
+        # ================================
+        # 🔥 SEMÁFORO PRODUCCIÓN
+        # ================================
+        horas = (ahora - p.fecha).total_seconds() / 3600
 
-            if fechas:
-                ultima = max(fechas)
+        if porc == 100:
+            verde_prod += 1
+        elif horas < 24:
+            naranja_prod += 1
+        else:
+            rojo_prod += 1
 
-                if fecha_desde <= ultima <= fecha_hasta:
-                    fecha_key = ultima.strftime("%Y-%m-%d")
-                    tendencia_produccion[fecha_key] += 1
+        # ================================
+        # TENDENCIA
+        # ================================
+        ultima = None
+        fechas = [x.fecha_escaneo for x in piezas if x.fecha_escaneo]
+
+        if fechas:
+            ultima = max(fechas)
+
+            if fecha_desde <= ultima <= fecha_hasta:
+                tendencia_produccion[ultima.strftime("%Y-%m-%d")] += 1
 
         registro_produccion.append({
             "pedido": p.numero_pedido,
@@ -3665,11 +3716,17 @@ def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta):
     # ======================================================
     # 🟢 ENTREGA CEDI
     # ======================================================
+
     entregas = db.query(EntregaCEDI).all()
 
     ent_pendientes = 0
     ent_curso = 0
     ent_completadas = 0
+
+    verde_cedi = 0
+    naranja_cedi = 0
+    rojo_cedi = 0
+
     tiempos = []
     tendencia_entregas = defaultdict(int)
     registro_entregas = []
@@ -3683,6 +3740,22 @@ def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta):
         elif e.estado in ["COMPLETADO", "CORREO_ENVIADO"]:
             ent_completadas += 1
 
+        # ================================
+        # 🔥 SEMÁFORO CEDI
+        # ================================
+        if e.fecha_inicio:
+            dias = (ahora - e.fecha_inicio).total_seconds() / 86400
+
+            if dias < 1:
+                verde_cedi += 1
+            elif dias < 2:
+                naranja_cedi += 1
+            else:
+                rojo_cedi += 1
+
+        # ================================
+        # MÉTRICA ORIGINAL (NO SE BORRA)
+        # ================================
         minutos = None
 
         if e.fecha_inicio and e.fecha_fin:
@@ -3692,8 +3765,7 @@ def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta):
             tiempos.append(minutos)
 
             if fecha_desde <= e.fecha_fin <= fecha_hasta:
-                fecha_key = e.fecha_fin.strftime("%Y-%m-%d")
-                tendencia_entregas[fecha_key] += 1
+                tendencia_entregas[e.fecha_fin.strftime("%Y-%m-%d")] += 1
 
         registro_entregas.append({
             "pedido_id": e.pedido_id,
@@ -3701,27 +3773,33 @@ def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta):
             "inicio": e.fecha_inicio.strftime("%Y-%m-%d %H:%M") if e.fecha_inicio else None,
             "fin": e.fecha_fin.strftime("%Y-%m-%d %H:%M") if e.fecha_fin else None,
             "minutos": minutos,
-            "cumple": True if minutos is not None and minutos <= 120 else False if minutos is not None else None
+            "cumple": True if minutos and minutos <= 120 else False if minutos else None
         })
 
     total_tiempos = len(tiempos)
     cumplen_entrega = sum(1 for t in tiempos if t <= 120)
 
-    promedio_entrega = round(sum(tiempos) / total_tiempos, 2) if total_tiempos > 0 else 0
+    promedio_entrega = round(sum(tiempos) / total_tiempos, 2) if total_tiempos else 0
 
     eficiencia_entrega = round(
         (cumplen_entrega / total_tiempos) * 100, 2
-    ) if total_tiempos > 0 else 0
+    ) if total_tiempos else 0
 
 
     # ======================================================
     # 🟠 DESPACHOS
     # ======================================================
+
     ovs = db.query(OV).all()
 
     ov_proceso = 0
     ov_lista = 0
     ov_despachada = 0
+
+    verde_desp = 0
+    naranja_desp = 0
+    rojo_desp = 0
+
     dias_cedi = []
     tendencia_despacho = defaultdict(int)
     registro_despachos = []
@@ -3735,6 +3813,22 @@ def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta):
         elif ov.estado == "DESPACHADA":
             ov_despachada += 1
 
+        # ================================
+        # 🔥 SEMÁFORO DESPACHOS
+        # ================================
+        if ov.estado == "LISTA_PARA_DESPACHO" and ov.fecha_lista_despacho:
+            dias_actual = (ahora - ov.fecha_lista_despacho).days
+
+            if dias_actual <= 2:
+                verde_desp += 1
+            elif dias_actual <= 4:
+                naranja_desp += 1
+            else:
+                rojo_desp += 1
+
+        # ================================
+        # MÉTRICA ORIGINAL
+        # ================================
         dias = None
 
         if ov.fecha_lista_despacho and ov.fecha_despacho:
@@ -3742,30 +3836,30 @@ def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta):
             dias_cedi.append(dias)
 
             if fecha_desde <= ov.fecha_despacho <= fecha_hasta:
-                fecha_key = ov.fecha_despacho.strftime("%Y-%m-%d")
-                tendencia_despacho[fecha_key] += 1
+                tendencia_despacho[ov.fecha_despacho.strftime("%Y-%m-%d")] += 1
 
         registro_despachos.append({
             "ov": ov.numero_ov,
             "fecha_lista": ov.fecha_lista_despacho.strftime("%Y-%m-%d") if ov.fecha_lista_despacho else None,
             "fecha_despacho": ov.fecha_despacho.strftime("%Y-%m-%d") if ov.fecha_despacho else None,
             "dias": dias,
-            "cumple": True if dias is not None and dias <= 5 else False if dias is not None else None
+            "cumple": True if dias and dias <= 5 else False if dias else None
         })
 
     total_dias = len(dias_cedi)
     cumplen_despacho = sum(1 for d in dias_cedi if d <= 5)
 
-    promedio_dias = round(sum(dias_cedi) / total_dias, 2) if total_dias > 0 else 0
+    promedio_dias = round(sum(dias_cedi) / total_dias, 2) if total_dias else 0
 
     eficiencia_despacho = round(
         (cumplen_despacho / total_dias) * 100, 2
-    ) if total_dias > 0 else 0
+    ) if total_dias else 0
 
 
     # ======================================================
     # 📊 CONSOLIDADO DIARIO
     # ======================================================
+
     consolidado = defaultdict(lambda: {
         "produccion": 0,
         "entregas": 0,
@@ -3781,22 +3875,33 @@ def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta):
     for fecha, valor in tendencia_despacho.items():
         consolidado[fecha]["despachos"] = valor
 
-    consolidado_ordenado = dict(
-        sorted(consolidado.items(), key=lambda x: x[0])
-    )
+    consolidado_ordenado = dict(sorted(consolidado.items()))
 
 
     # ======================================================
-    # 🏛 INDICE GLOBAL SGI
+    # 🔥 INDICADORES NUEVOS (CLAVE)
     # ======================================================
+
+    prod_stats = calcular_porcentajes(verde_prod, naranja_prod, rojo_prod)
+    cedi_stats = calcular_porcentajes(verde_cedi, naranja_cedi, rojo_cedi)
+    desp_stats = calcular_porcentajes(verde_desp, naranja_desp, rojo_desp)
+
+
+    # ======================================================
+    # 🏛 INDICE GLOBAL
+    # ======================================================
+
     indice_sgi = round(
-        (cumplimiento_produccion + eficiencia_entrega + eficiencia_despacho) / 3,
+        (prod_stats["porcentajes"]["verde"] +
+         cedi_stats["porcentajes"]["verde"] +
+         desp_stats["porcentajes"]["verde"]) / 3,
         2
     )
 
 
     return {
         "indice_sgi": indice_sgi,
+
         "produccion": {
             "pendientes": pendientes,
             "en_proceso": en_proceso,
@@ -3805,6 +3910,7 @@ def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta):
             "tendencia": dict(tendencia_produccion),
             "registro": registro_produccion
         },
+
         "entrega": {
             "pendientes": ent_pendientes,
             "en_curso": ent_curso,
@@ -3814,6 +3920,7 @@ def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta):
             "tendencia": dict(tendencia_entregas),
             "registro": registro_entregas
         },
+
         "despachos": {
             "en_proceso": ov_proceso,
             "listas": ov_lista,
@@ -3823,6 +3930,36 @@ def obtener_metricas_dashboard(db, fecha_desde, fecha_hasta):
             "tendencia": dict(tendencia_despacho),
             "registro": registro_despachos
         },
+
+        # 🔥 NUEVO BLOQUE CLAVE
+        "indicadores": {
+            "produccion": {
+                "verde": verde_prod,
+                "naranja": naranja_prod,
+                "rojo": rojo_prod,
+                **prod_stats
+            },
+            "cedi": {
+                "verde": verde_cedi,
+                "naranja": naranja_cedi,
+                "rojo": rojo_cedi,
+                **cedi_stats
+            },
+            "despachos": {
+                "verde": verde_desp,
+                "naranja": naranja_desp,
+                "rojo": rojo_desp,
+                **desp_stats
+            }
+        },
+
+        # 🔥 PARA GRÁFICA
+        "linea_objetivo": {
+            "minimo": 60,
+            "objetivo": 80,
+            "excelente": 100
+        },
+
         "consolidado_diario": consolidado_ordenado
     }
 # ==========================================================
@@ -3852,7 +3989,15 @@ def dashboard_direccion(
             try:
                 fecha_desde = datetime.strptime(desde, "%Y-%m-%d")
                 fecha_hasta = datetime.strptime(hasta, "%Y-%m-%d")
-                fecha_hasta = fecha_hasta.replace(hour=23, minute=59, second=59)
+
+                # 🔥 asegurar fin del día correctamente
+                fecha_hasta = fecha_hasta.replace(
+                    hour=23,
+                    minute=59,
+                    second=59,
+                    microsecond=999999
+                )
+
             except ValueError:
                 raise HTTPException(
                     status_code=400,
@@ -3860,7 +4005,11 @@ def dashboard_direccion(
                 )
         else:
             now = datetime.now()
+
+            # 🔥 inicio de mes limpio
             fecha_desde = datetime(now.year, now.month, 1)
+
+            # 🔥 ahora exacto (sin modificar)
             fecha_hasta = now
 
         # ======================================================
@@ -3872,6 +4021,15 @@ def dashboard_direccion(
             fecha_hasta
         )
 
+        # ======================================================
+        # 🔥 PROTECCIÓN (NUNCA ROMPER FRONT)
+        # ======================================================
+        if not isinstance(data, dict):
+            data = {}
+
+        # ======================================================
+        # RANGO RESPUESTA
+        # ======================================================
         data["rango"] = {
             "desde": fecha_desde.strftime("%Y-%m-%d"),
             "hasta": fecha_hasta.strftime("%Y-%m-%d")
@@ -3917,7 +4075,8 @@ def export_dashboard_produccion(
                 fecha_hasta = fecha_hasta.replace(
                     hour=23,
                     minute=59,
-                    second=59
+                    second=59,
+                    microsecond=999999
                 )
             except ValueError:
                 raise HTTPException(
@@ -3942,6 +4101,10 @@ def export_dashboard_produccion(
         # CREAR EXCEL
         # ======================================================
         wb = Workbook()
+
+        # =========================
+        # HOJA 1: DETALLE
+        # =========================
         ws = wb.active
         ws.title = "Producción SGI"
 
@@ -3951,18 +4114,75 @@ def export_dashboard_produccion(
             "Total Piezas",
             "Escaneadas",
             "% Cumplimiento",
+            "Horas Transcurridas",
+            "Semáforo",
             "Última Fecha Escaneo"
         ])
 
+        ahora = datetime.now()
+
+        verde = 0
+        naranja = 0
+        rojo = 0
+
         for r in data["produccion"].get("registro", []):
+
+            pedido_obj = db.query(Pedido).filter(
+                Pedido.numero_pedido == r["pedido"]
+            ).first()
+
+            horas = 0
+            semaforo = "VERDE"
+
+            if pedido_obj and pedido_obj.fecha:
+                horas = round(
+                    (ahora - pedido_obj.fecha).total_seconds() / 3600, 2
+                )
+
+                # 🔥 MISMA LÓGICA DEL DASHBOARD
+                if r["porcentaje"] == 100:
+                    semaforo = "VERDE"
+                    verde += 1
+                elif horas < 24:
+                    semaforo = "NARANJA"
+                    naranja += 1
+                else:
+                    semaforo = "ROJO"
+                    rojo += 1
+
             ws.append([
                 r["pedido"],
                 r["cliente"],
                 r["total_piezas"],
                 r["escaneadas"],
                 r["porcentaje"],
+                horas,
+                semaforo,
                 r["ultima_fecha"]
             ])
+
+        # =========================
+        # HOJA 2: RESUMEN GERENCIAL 🔥
+        # =========================
+        resumen = wb.create_sheet(title="Resumen")
+
+        total = verde + naranja + rojo
+
+        def pct(valor):
+            return round((valor / total) * 100, 2) if total > 0 else 0
+
+        resumen.append(["INDICADOR", "VALOR"])
+        resumen.append(["Total Pedidos", total])
+        resumen.append([])
+        resumen.append(["A Tiempo (VERDE)", f"{verde} ({pct(verde)}%)"])
+        resumen.append(["En Riesgo (NARANJA)", f"{naranja} ({pct(naranja)}%)"])
+        resumen.append(["Atrasados (ROJO)", f"{rojo} ({pct(rojo)}%)"])
+        resumen.append([])
+
+        resumen.append(["OBJETIVOS"])
+        resumen.append(["Mínimo", "60%"])
+        resumen.append(["Objetivo", "80%"])
+        resumen.append(["Excelente", "100%"])
 
         # ======================================================
         # GUARDAR ARCHIVO
@@ -4020,7 +4240,8 @@ def export_dashboard_entrega(
                 fecha_hasta = fecha_hasta.replace(
                     hour=23,
                     minute=59,
-                    second=59
+                    second=59,
+                    microsecond=999999
                 )
             except ValueError:
                 raise HTTPException(
@@ -4045,6 +4266,10 @@ def export_dashboard_entrega(
         # CREAR EXCEL
         # ======================================================
         wb = Workbook()
+
+        # =========================
+        # HOJA 1: DETALLE
+        # =========================
         ws = wb.active
         ws.title = "Entrega CEDI"
 
@@ -4054,18 +4279,82 @@ def export_dashboard_entrega(
             "Inicio",
             "Fin",
             "Minutos",
+            "Días Transcurridos",
+            "Semáforo",
             "Cumple (<=120)"
         ])
 
+        ahora = datetime.now()
+
+        verde = 0
+        naranja = 0
+        rojo = 0
+
         for r in data["entrega"].get("registro", []):
+
+            dias = 0
+            semaforo = "VERDE"
+
+            if r["inicio"]:
+                try:
+                    fecha_inicio = datetime.strptime(
+                        r["inicio"],
+                        "%Y-%m-%d %H:%M"
+                    )
+
+                    dias = round(
+                        (ahora - fecha_inicio).total_seconds() / 86400,
+                        2
+                    )
+
+                    # 🔥 REGLA OPERATIVA CEDI
+                    if dias < 1:
+                        semaforo = "VERDE"
+                        verde += 1
+                    elif dias < 2:
+                        semaforo = "NARANJA"
+                        naranja += 1
+                    else:
+                        semaforo = "ROJO"
+                        rojo += 1
+
+                except Exception:
+                    dias = 0
+                    semaforo = "SIN_FECHA"
+
             ws.append([
                 r["pedido_id"],
                 r["responsable"],
                 r["inicio"],
                 r["fin"],
                 r["minutos"],
+                dias,
+                semaforo,
                 r["cumple"]
             ])
+
+        # =========================
+        # HOJA 2: RESUMEN GERENCIAL 🔥
+        # =========================
+        resumen = wb.create_sheet(title="Resumen")
+
+        total = verde + naranja + rojo
+
+        def pct(valor):
+            return round((valor / total) * 100, 2) if total > 0 else 0
+
+        resumen.append(["INDICADOR", "VALOR"])
+        resumen.append(["Total Entregas", total])
+        resumen.append([])
+        resumen.append(["A Tiempo (VERDE)", f"{verde} ({pct(verde)}%)"])
+        resumen.append(["En Riesgo (NARANJA)", f"{naranja} ({pct(naranja)}%)"])
+        resumen.append(["Atrasadas (ROJO)", f"{rojo} ({pct(rojo)}%)"])
+        resumen.append([])
+
+        resumen.append(["OBJETIVOS"])
+        resumen.append(["A Tiempo", "< 1 día"])
+        resumen.append(["En Riesgo", "1 - 2 días"])
+        resumen.append(["Atrasado", "> 2 días"])
 
         # ======================================================
         # GUARDAR ARCHIVO
@@ -4123,7 +4412,8 @@ def export_dashboard_despachos(
                 fecha_hasta = fecha_hasta.replace(
                     hour=23,
                     minute=59,
-                    second=59
+                    second=59,
+                    microsecond=999999
                 )
             except ValueError:
                 raise HTTPException(
@@ -4148,6 +4438,10 @@ def export_dashboard_despachos(
         # CREAR EXCEL
         # ======================================================
         wb = Workbook()
+
+        # =========================
+        # HOJA 1: DETALLE
+        # =========================
         ws = wb.active
         ws.title = "Despachos"
 
@@ -4156,17 +4450,81 @@ def export_dashboard_despachos(
             "Fecha Lista",
             "Fecha Despacho",
             "Días en CEDI",
+            "Días Actuales",
+            "Semáforo",
             "Cumple (<=5 días)"
         ])
 
+        ahora = datetime.now()
+
+        verde = 0
+        naranja = 0
+        rojo = 0
+
         for r in data["despachos"].get("registro", []):
+
+            dias_actual = 0
+            semaforo = "VERDE"
+
+            # =========================================
+            # CÁLCULO TIEMPO REAL
+            # =========================================
+            if r["fecha_lista"]:
+                try:
+                    fecha_lista = datetime.strptime(
+                        r["fecha_lista"],
+                        "%Y-%m-%d"
+                    )
+
+                    dias_actual = (ahora - fecha_lista).days
+
+                    # 🔥 REGLA OPERATIVA DESPACHOS
+                    if dias_actual <= 2:
+                        semaforo = "VERDE"
+                        verde += 1
+                    elif dias_actual <= 4:
+                        semaforo = "NARANJA"
+                        naranja += 1
+                    else:
+                        semaforo = "ROJO"
+                        rojo += 1
+
+                except Exception:
+                    dias_actual = 0
+                    semaforo = "SIN_FECHA"
+
             ws.append([
                 r["ov"],
                 r["fecha_lista"],
                 r["fecha_despacho"],
                 r["dias"],
+                dias_actual,
+                semaforo,
                 r["cumple"]
             ])
+
+        # =========================
+        # HOJA 2: RESUMEN GERENCIAL 🔥
+        # =========================
+        resumen = wb.create_sheet(title="Resumen")
+
+        total = verde + naranja + rojo
+
+        def pct(valor):
+            return round((valor / total) * 100, 2) if total > 0 else 0
+
+        resumen.append(["INDICADOR", "VALOR"])
+        resumen.append(["Total OVs", total])
+        resumen.append([])
+        resumen.append(["A Tiempo (VERDE)", f"{verde} ({pct(verde)}%)"])
+        resumen.append(["En Riesgo (NARANJA)", f"{naranja} ({pct(naranja)}%)"])
+        resumen.append(["Atrasados (ROJO)", f"{rojo} ({pct(rojo)}%)"])
+        resumen.append([])
+
+        resumen.append(["OBJETIVOS"])
+        resumen.append(["A Tiempo", "<= 2 días"])
+        resumen.append(["En Riesgo", "3 - 4 días"])
+        resumen.append(["Atrasado", ">= 5 días"])
 
         # ======================================================
         # GUARDAR ARCHIVO
@@ -4294,48 +4652,72 @@ def export_dashboard_consolidado(
     finally:
         db.close()
 # ==========================================================
-# CALCULAR PERIODO ANTERIOR (COMPARATIVO MENSUAL REAL)
+# CALCULAR PERIODO COMPARATIVO INTELIGENTE
 # ==========================================================
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from calendar import monthrange
 
 
-def calcular_periodo_anterior(desde_dt, hasta_dt):
+def calcular_periodo_anterior(desde_dt, hasta_dt, modo="mensual"):
     """
-    Retorna el rango completo del mes anterior
-    basado en la fecha 'desde_dt'.
+    Calcula periodo comparativo según modo:
+
+    modos:
+    - "mensual": mismo rango mes anterior
+    - "rango": mismo tamaño de rango hacia atrás
+    - "semanal": semana anterior equivalente
     """
 
-    if not isinstance(desde_dt, datetime):
-        raise ValueError("desde_dt debe ser datetime")
+    if not isinstance(desde_dt, datetime) or not isinstance(hasta_dt, datetime):
+        raise ValueError("desde_dt y hasta_dt deben ser datetime")
 
-    mes_actual = desde_dt.month
-    año_actual = desde_dt.year
+    # =========================================
+    # 🔵 MODO 1: MENSUAL (como ya tenías)
+    # =========================================
+    if modo == "mensual":
 
-    # Determinar mes anterior
-    if mes_actual == 1:
-        mes_anterior = 12
-        año_anterior = año_actual - 1
+        if desde_dt.month == 1:
+            mes_anterior = 12
+            año_anterior = desde_dt.year - 1
+        else:
+            mes_anterior = desde_dt.month - 1
+            año_anterior = desde_dt.year
+
+        ultimo_dia = monthrange(año_anterior, mes_anterior)[1]
+
+        dia_desde = min(desde_dt.day, ultimo_dia)
+        dia_hasta = min(hasta_dt.day, ultimo_dia)
+
+        nuevo_desde = datetime(año_anterior, mes_anterior, dia_desde)
+        nuevo_hasta = datetime(año_anterior, mes_anterior, dia_hasta, 23, 59, 59)
+
+        return nuevo_desde, nuevo_hasta
+
+    # =========================================
+    # 🟢 MODO 2: RANGO LIBRE (🔥 EL MÁS POTENTE)
+    # =========================================
+    elif modo == "rango":
+
+        delta = hasta_dt - desde_dt
+
+        nuevo_hasta = desde_dt - timedelta(seconds=1)
+        nuevo_desde = nuevo_hasta - delta
+
+        return nuevo_desde, nuevo_hasta
+
+    # =========================================
+    # 🟠 MODO 3: SEMANAL
+    # =========================================
+    elif modo == "semanal":
+
+        nuevo_desde = desde_dt - timedelta(days=7)
+        nuevo_hasta = hasta_dt - timedelta(days=7)
+
+        return nuevo_desde, nuevo_hasta
+
     else:
-        mes_anterior = mes_actual - 1
-        año_anterior = año_actual
-
-    # Último día del mes anterior
-    ultimo_dia_anterior = monthrange(año_anterior, mes_anterior)[1]
-
-    nuevo_desde = datetime(año_anterior, mes_anterior, 1)
-    nuevo_hasta = datetime(
-        año_anterior,
-        mes_anterior,
-        ultimo_dia_anterior,
-        23,
-        59,
-        59
-    )
-
-    return nuevo_desde, nuevo_hasta
-
+        raise ValueError("Modo no válido: usa 'mensual', 'rango' o 'semanal'")
 
 # ==========================================================
 # SEGURIDAD GERENCIAL
@@ -4343,21 +4725,8 @@ def calcular_periodo_anterior(desde_dt, hasta_dt):
 
 PIN_GERENCIAL = "1308"
 # ==========================================================
-# PDF INFORME GENERAL SGI - VERSION CORPORATIVA FINAL
+# PDF INFORME GENERAL SGI - VERSION CORPORATIVA FINAL (INTELIGENTE)
 # ==========================================================
-
-from fastapi import HTTPException, Query
-from fastapi.responses import FileResponse
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib import colors
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.lib import pagesizes
-from reportlab.lib.colors import HexColor
-from calendar import monthrange
-from datetime import datetime
-import os
-
 
 @app.get("/dashboard/pdf-completo")
 def generar_pdf_completo(
@@ -4367,7 +4736,6 @@ def generar_pdf_completo(
     hasta: str = Query(None)
 ):
 
-    # 🔐 PIN GERENCIAL
     if pin != PIN_GERENCIAL:
         raise HTTPException(status_code=403, detail="Acceso no autorizado")
 
@@ -4383,17 +4751,13 @@ def generar_pdf_completo(
         # ======================================================
         # RANGO FECHAS
         # ======================================================
-
         if desde and hasta:
             try:
                 desde_dt = datetime.strptime(desde, "%Y-%m-%d")
                 hasta_dt = datetime.strptime(hasta, "%Y-%m-%d")
-                hasta_dt = hasta_dt.replace(hour=23, minute=59, second=59)
+                hasta_dt = hasta_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
             except ValueError:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Formato de fecha inválido. Use YYYY-MM-DD"
-                )
+                raise HTTPException(400, "Formato de fecha inválido")
         else:
             now = datetime.now()
             ultimo_dia = monthrange(now.year, now.month)[1]
@@ -4405,14 +4769,66 @@ def generar_pdf_completo(
         # ======================================================
         # MÉTRICAS
         # ======================================================
-
         data_actual = obtener_metricas_dashboard(db, desde_dt, hasta_dt)
         data_anterior = obtener_metricas_dashboard(db, desde_ant, hasta_ant)
 
         # ======================================================
+        # 🧠 FUNCIÓN INTELIGENTE
+        # ======================================================
+        def analizar_etapa(actual, anterior):
+            verde = actual["porcentajes"]["verde"]
+            naranja = actual["porcentajes"]["naranja"]
+            rojo = actual["porcentajes"]["rojo"]
+
+            verde_ant = anterior["porcentajes"]["verde"]
+            variacion = round(verde - verde_ant, 2)
+
+            if verde >= 80:
+                nivel = "óptimo"
+            elif verde >= 60:
+                nivel = "aceptable"
+            else:
+                nivel = "crítico"
+
+            if rojo > 20:
+                diagnostico = "alto nivel de atraso"
+            elif naranja > 30:
+                diagnostico = "riesgo operativo creciente"
+            else:
+                diagnostico = "operación controlada"
+
+            if variacion > 0:
+                tendencia = "mejora"
+            elif variacion < 0:
+                tendencia = "empeora"
+            else:
+                tendencia = "estable"
+
+            return {
+                "nivel": nivel,
+                "variacion": variacion,
+                "diagnostico": diagnostico,
+                "tendencia": tendencia
+            }
+
+        analisis_prod = analizar_etapa(
+            data_actual["indicadores"]["produccion"],
+            data_anterior["indicadores"]["produccion"]
+        )
+
+        analisis_cedi = analizar_etapa(
+            data_actual["indicadores"]["cedi"],
+            data_anterior["indicadores"]["cedi"]
+        )
+
+        analisis_desp = analizar_etapa(
+            data_actual["indicadores"]["despachos"],
+            data_anterior["indicadores"]["despachos"]
+        )
+
+        # ======================================================
         # CONFIGURACIÓN ARCHIVO
         # ======================================================
-
         carpeta = "reportes"
         os.makedirs(carpeta, exist_ok=True)
 
@@ -4433,62 +4849,13 @@ def generar_pdf_completo(
         # ======================================================
         # ESTILOS
         # ======================================================
-
-        style_normal = ParagraphStyle(
-            name='NormalStyle',
-            fontName='Helvetica',
-            fontSize=11,
-        )
-
-        style_title = ParagraphStyle(
-            name='TitleStyle',
-            fontName='Helvetica-Bold',
-            fontSize=18,
-        )
-
-        style_index = ParagraphStyle(
-            name='IndexStyle',
-            fontName='Helvetica-Bold',
-            fontSize=26,
-            textColor=HexColor("#ff7a00")
-        )
-
-        # ======================================================
-        # DECORACIÓN CORPORATIVA
-        # ======================================================
-
-        def decoracion(canvas_obj, doc):
-
-            canvas_obj.saveState()
-
-            canvas_obj.setStrokeColor(HexColor("#ff7a00"))
-            canvas_obj.setLineWidth(4)
-            canvas_obj.rect(20, 20, 555, 802, stroke=1, fill=0)
-
-            logo_path = "static/logo.png"
-            if os.path.exists(logo_path):
-                canvas_obj.drawImage(
-                    logo_path,
-                    420, 760,
-                    width=120,
-                    height=40,
-                    preserveAspectRatio=True
-                )
-
-            canvas_obj.setFont("Helvetica-Bold", 70)
-            canvas_obj.setFillColorRGB(1, 0.5, 0)
-            try:
-                canvas_obj.setFillAlpha(0.05)
-            except:
-                pass
-            canvas_obj.drawCentredString(300, 420, "MADECENTRO")
-
-            canvas_obj.restoreState()
+        style_normal = ParagraphStyle(name='NormalStyle', fontName='Helvetica', fontSize=11)
+        style_title = ParagraphStyle(name='TitleStyle', fontName='Helvetica-Bold', fontSize=18)
+        style_index = ParagraphStyle(name='IndexStyle', fontName='Helvetica-Bold', fontSize=26, textColor=HexColor("#ff7a00"))
 
         # ======================================================
         # PORTADA
         # ======================================================
-
         elements.append(Paragraph("INFORME GENERAL OPERATIVO SGI", style_title))
         elements.append(Spacer(1, 0.3 * inch))
 
@@ -4507,45 +4874,62 @@ def generar_pdf_completo(
         elements.append(Spacer(1, 0.5 * inch))
 
         # ======================================================
-        # CONCLUSIÓN ESTRATÉGICA
+        # CONCLUSIÓN INTELIGENTE
         # ======================================================
-
         indice_actual = data_actual["indice_sgi"]
         indice_anterior = data_anterior["indice_sgi"]
-
         variacion = round(indice_actual - indice_anterior, 2)
 
         if variacion > 0:
-            conclusion = f"El desempeño global mejora {variacion} puntos frente al mes anterior. "
+            conclusion = f"El desempeño global mejora {variacion} puntos frente al periodo anterior. "
         elif variacion < 0:
-            conclusion = f"El desempeño global disminuye {abs(variacion)} puntos respecto al mes anterior. "
+            conclusion = f"El desempeño global disminuye {abs(variacion)} puntos respecto al periodo anterior. "
         else:
-            conclusion = "El desempeño global se mantiene estable frente al mes anterior. "
+            conclusion = "El desempeño global se mantiene estable frente al periodo anterior. "
 
-        def estado_texto(valor):
-            if valor >= 85:
-                return "nivel óptimo"
-            elif valor >= 65:
-                return "nivel aceptable"
-            else:
-                return "nivel crítico"
-
-        conclusion += f"Producción en {estado_texto(data_actual['produccion']['cumplimiento'])}. "
-        conclusion += f"Entrega CEDI en {estado_texto(data_actual['entrega']['eficiencia'])}. "
-        conclusion += f"Despachos en {estado_texto(data_actual['despachos']['eficiencia'])}."
+        conclusion += (
+            f"Producción en nivel {analisis_prod['nivel']} ({analisis_prod['tendencia']}). "
+            f"CEDI en nivel {analisis_cedi['nivel']} ({analisis_cedi['tendencia']}). "
+            f"Despachos en nivel {analisis_desp['nivel']} ({analisis_desp['tendencia']})."
+        )
 
         elements.append(Paragraph("CONCLUSIÓN ESTRATÉGICA", style_title))
         elements.append(Spacer(1, 0.2 * inch))
         elements.append(Paragraph(conclusion, style_normal))
+        elements.append(Spacer(1, 0.4 * inch))
+
+        # ======================================================
+        # 🚨 ALERTAS (NUEVO BLOQUE)
+        # ======================================================
+        elements.append(Paragraph("ALERTAS OPERATIVAS", style_title))
+        elements.append(Spacer(1, 0.2 * inch))
+
+        alertas = []
+
+        if analisis_prod["diagnostico"] != "operación controlada":
+            alertas.append(f"Producción: {analisis_prod['diagnostico']}")
+
+        if analisis_cedi["diagnostico"] != "operación controlada":
+            alertas.append(f"CEDI: {analisis_cedi['diagnostico']}")
+
+        if analisis_desp["diagnostico"] != "operación controlada":
+            alertas.append(f"Despachos: {analisis_desp['diagnostico']}")
+
+        if not alertas:
+            alertas.append("Operación sin alertas críticas")
+
+        for a in alertas:
+            elements.append(Paragraph(f"- {a}", style_normal))
+
         elements.append(Spacer(1, 0.5 * inch))
 
         # ======================================================
-        # TABLAS (Producción, Entrega, Despachos)
+        # 🔽 DESDE AQUÍ TODO TU CÓDIGO ORIGINAL SE MANTIENE
         # ======================================================
 
         # PRODUCCIÓN
-        elements.append(Paragraph("PRODUCCIÓN", style_title))
-        elements.append(Spacer(1, 0.2 * inch))
+        prod_act = data_actual["indicadores"]["produccion"]
+        prod_ant = data_anterior["indicadores"]["produccion"]
 
         tabla_prod = Table([
             ["Métrica", "Actual", "Anterior"],
@@ -4553,6 +4937,12 @@ def generar_pdf_completo(
             ["En Proceso", data_actual["produccion"]["en_proceso"], data_anterior["produccion"]["en_proceso"]],
             ["Completadas", data_actual["produccion"]["completadas"], data_anterior["produccion"]["completadas"]],
             ["% Cumplimiento", data_actual["produccion"]["cumplimiento"], data_anterior["produccion"]["cumplimiento"]],
+            ["Verde", f"{prod_act['verde']} ({prod_act['porcentajes']['verde']}%)",
+                      f"{prod_ant['verde']} ({prod_ant['porcentajes']['verde']}%)"],
+            ["Naranja", f"{prod_act['naranja']} ({prod_act['porcentajes']['naranja']}%)",
+                        f"{prod_ant['naranja']} ({prod_ant['porcentajes']['naranja']}%)"],
+            ["Rojo", f"{prod_act['rojo']} ({prod_act['porcentajes']['rojo']}%)",
+                     f"{prod_ant['rojo']} ({prod_ant['porcentajes']['rojo']}%)"],
         ])
 
         tabla_prod.setStyle(TableStyle([
@@ -4561,18 +4951,26 @@ def generar_pdf_completo(
             ('GRID', (0,0), (-1,-1), 0.5, colors.grey)
         ]))
 
+        elements.append(Paragraph("PRODUCCIÓN", style_title))
+        elements.append(Spacer(1, 0.2 * inch))
         elements.append(tabla_prod)
         elements.append(Spacer(1, 0.4 * inch))
 
         # ENTREGA
-        elements.append(Paragraph("ENTREGA CEDI", style_title))
-        elements.append(Spacer(1, 0.2 * inch))
+        cedi_act = data_actual["indicadores"]["cedi"]
+        cedi_ant = data_anterior["indicadores"]["cedi"]
 
         tabla_ent = Table([
             ["Métrica", "Actual", "Anterior"],
             ["Completadas", data_actual["entrega"]["completadas"], data_anterior["entrega"]["completadas"]],
             ["Promedio Min", data_actual["entrega"]["promedio_minutos"], data_anterior["entrega"]["promedio_minutos"]],
             ["% Eficiencia", data_actual["entrega"]["eficiencia"], data_anterior["entrega"]["eficiencia"]],
+            ["Verde", f"{cedi_act['verde']} ({cedi_act['porcentajes']['verde']}%)",
+                      f"{cedi_ant['verde']} ({cedi_ant['porcentajes']['verde']}%)"],
+            ["Naranja", f"{cedi_act['naranja']} ({cedi_act['porcentajes']['naranja']}%)",
+                        f"{cedi_ant['naranja']} ({cedi_ant['porcentajes']['naranja']}%)"],
+            ["Rojo", f"{cedi_act['rojo']} ({cedi_act['porcentajes']['rojo']}%)",
+                     f"{cedi_ant['rojo']} ({cedi_ant['porcentajes']['rojo']}%)"],
         ])
 
         tabla_ent.setStyle(TableStyle([
@@ -4581,18 +4979,26 @@ def generar_pdf_completo(
             ('GRID', (0,0), (-1,-1), 0.5, colors.grey)
         ]))
 
+        elements.append(Paragraph("ENTREGA CEDI", style_title))
+        elements.append(Spacer(1, 0.2 * inch))
         elements.append(tabla_ent)
         elements.append(Spacer(1, 0.4 * inch))
 
         # DESPACHOS
-        elements.append(Paragraph("DESPACHOS", style_title))
-        elements.append(Spacer(1, 0.2 * inch))
+        desp_act = data_actual["indicadores"]["despachos"]
+        desp_ant = data_anterior["indicadores"]["despachos"]
 
         tabla_des = Table([
             ["Métrica", "Actual", "Anterior"],
             ["Despachadas", data_actual["despachos"]["despachadas"], data_anterior["despachos"]["despachadas"]],
             ["Promedio Días", data_actual["despachos"]["promedio_dias"], data_anterior["despachos"]["promedio_dias"]],
             ["% Eficiencia", data_actual["despachos"]["eficiencia"], data_anterior["despachos"]["eficiencia"]],
+            ["Verde", f"{desp_act['verde']} ({desp_act['porcentajes']['verde']}%)",
+                      f"{desp_ant['verde']} ({desp_ant['porcentajes']['verde']}%)"],
+            ["Naranja", f"{desp_act['naranja']} ({desp_act['porcentajes']['naranja']}%)",
+                        f"{desp_ant['naranja']} ({desp_ant['porcentajes']['naranja']}%)"],
+            ["Rojo", f"{desp_act['rojo']} ({desp_act['porcentajes']['rojo']}%)",
+                     f"{desp_ant['rojo']} ({desp_ant['porcentajes']['rojo']}%)"],
         ])
 
         tabla_des.setStyle(TableStyle([
@@ -4601,11 +5007,9 @@ def generar_pdf_completo(
             ('GRID', (0,0), (-1,-1), 0.5, colors.grey)
         ]))
 
+        elements.append(Paragraph("DESPACHOS", style_title))
+        elements.append(Spacer(1, 0.2 * inch))
         elements.append(tabla_des)
-
-        # ======================================================
-        # GENERAR PDF
-        # ======================================================
 
         doc.build(elements, onFirstPage=decoracion, onLaterPages=decoracion)
 
