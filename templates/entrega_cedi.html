@@ -151,22 +151,6 @@ button:disabled{
 
 <div class="card">
 <h3>📦 Información del Pedido</h3>
-<!-- PANEL SEMAFORO CEDI -->
-<div style="display:flex;gap:10px;margin-bottom:10px;font-weight:bold">
-
-<div style="background:#16a34a;color:white;padding:5px 10px;border-radius:6px">
-🟢 <span id="cedi_verde">0</span>
-</div>
-
-<div style="background:#f59e0b;color:white;padding:5px 10px;border-radius:6px">
-🟠 <span id="cedi_naranja">0</span>
-</div>
-
-<div style="background:#dc2626;color:white;padding:5px 10px;border-radius:6px">
-🔴 <span id="cedi_rojo">0</span>
-</div>
-
-</div>
 
 <p><b>Pedido:</b> <span id="pedido">-</span></p>
 <p><b>Cliente:</b> <span id="cliente">-</span></p>
@@ -219,7 +203,7 @@ button:disabled{
 
 <div class="card">
 <h3>📷 Subir Remisión</h3>
-<input type="file" id="remision_file" accept="image/*,application/pdf" capture="environment">
+<input type="file" id="remision_file" accept="image/*">
 <br>
 <button class="blue" onclick="subirRemision()">Subir Remisión</button>
 <div id="preview"></div>
@@ -243,53 +227,12 @@ let fechaInicio = null;
 let estadoActual = "PENDIENTE";
 let totalPaquetes = 0;
 
-/* ================= PREVIEW REMISION ================= */
-document.getElementById("remision_file").addEventListener("change", function(e){
-
-    const file = e.target.files[0];
-    const preview = document.getElementById("preview");
-
-    preview.innerHTML = "";
-
-    if(!file) return;
-
-    // Si es imagen → mostrar preview
-    if(file.type.startsWith("image/")){
-        const img = document.createElement("img");
-        img.className = "preview-img";
-        img.src = URL.createObjectURL(file);
-        preview.appendChild(img);
-    }
-
-    // Si es PDF → mostrar nombre
-    else if(file.type === "application/pdf"){
-        preview.innerHTML = `<p>📄 ${file.name}</p>`;
-    }
-});
-</script>
-
 /* ================= CARGAR DATOS ================= */
 async function cargarDatos(){
 
     let res = await fetch(`/api/entrega_cedi/${PEDIDO_ID}`);
     let data = await res.json();
-/* ================= PANEL SEMAFORO CEDI ================= */
 
-let panel = await fetch(`/api/pedidos_entrega?page=1&size=1`);
-let panelData = await panel.json();
-
-if(panelData.panel_semaforo){
-
-    document.getElementById("cedi_verde").innerText =
-        panelData.panel_semaforo.verde;
-
-    document.getElementById("cedi_naranja").innerText =
-        panelData.panel_semaforo.naranja;
-
-    document.getElementById("cedi_rojo").innerText =
-        panelData.panel_semaforo.rojo;
-
-}
     estadoActual = data.estado;
 
     // CRONÓMETRO CONTROL
@@ -463,15 +406,7 @@ async function enviarCorreo(){
     });
 
     let data = await res.json();
-
-    // 🔥 AJUSTE: mensaje más claro sin romper lógica existente
-    if(res.ok){
-        document.getElementById("mensaje").innerText =
-            "✅ Correo enviado y pedido cargado a despachos correctamente";
-    } else {
-        document.getElementById("mensaje").innerText =
-            "❌ " + (data.detail || "Error al enviar correo");
-    }
+    document.getElementById("mensaje").innerText = data.mensaje || data.detail;
 
     if(res.ok){
         // ⬇⬇⬇ AQUI ESTA LA CLAVE ⬇⬇⬇
@@ -482,6 +417,7 @@ async function enviarCorreo(){
 function generarPDF(){
     window.open(`/reporte_pdf/${PEDIDO_ID}?t=${new Date().getTime()}`, "_blank");
 }
+
 /* ================= CRONÓMETRO ================= */
 function actualizarCronometro(){
 
